@@ -4,62 +4,73 @@ namespace App\Http\Controllers;
 
 use App\Models\Ticket;
 use Illuminate\Http\Request;
+use App\Http\Requests\StoreticketRequest;
+use App\Http\Resources\TicketResource;
 
 class TicketController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
+    // Listar tickets
     public function index()
     {
-        //
+        $tickets = Ticket::with('user')->latest()->get();
+
+        return TicketResource::collection($tickets);
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
+    // Crear ticket
+    public function store(StoreticketRequest $request)
     {
-        //
+        $validated = $request->validate();
+
+        $validated['user_id'] = $request->user()->id;
+
+        $ticket = Ticket::create($validated);
+
+        return response()->json([
+            'message' => 'Ticket created successfully',
+            'ticket' => new TicketResource($ticket)
+        ], 201);
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
+    // Mostrar ticket individual
+    public function show(string $id)
     {
-        //
+        $ticket = Ticket::with('user')->findOrFail($id);
+
+        return new TicketResource($ticket);
     }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(Ticket $ticket)
+    // Actualizar ticket
+    public function update(StoreticketRequest $request, string $id)
     {
-        //
+        $ticket = Ticket::findOrFail($id);
+        $this->authorize('update', $ticket);
+        $validated = $request->validate([
+            'title' => 'sometimes|string|max:255',
+            'description' => 'sometimes|string',
+            'status' => 'sometimes|in:open,in_progress,closed',
+            'priority' => 'sometimes|in:low,medium,high'
+        ]);
+
+        $ticket->update($validated);
+
+        return response()->json([
+            'message' => 'Ticket updated successfully',
+            'ticket' => new TicketResource($ticket)
+        ]);
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(Ticket $ticket)
+    // Eliminar ticket
+    public function destroy(string $id)
     {
-        //
-    }
+        $ticket = Ticket::findOrFail($id);
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, Ticket $ticket)
-    {
-        //
-    }
+        $this->authorize('delete', $ticket);
 
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(Ticket $ticket)
-    {
-        //
+        $ticket->delete();
+
+        return response()->json([
+            'message' => 'Ticket deleted successfully'
+        ]);
     }
 }
