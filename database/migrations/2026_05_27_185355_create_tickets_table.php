@@ -20,6 +20,7 @@ return new class extends Migration
     $table->enum('status', [
         'open',
         'in_progress',
+        'resolved',
         'closed'
     ])->default('open');
 
