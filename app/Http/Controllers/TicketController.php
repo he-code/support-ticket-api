@@ -132,21 +132,15 @@ use App\Http\Requests\UpdateTicketStatusRequest;
 
 
     //Actualizar solo el estado del ticket
-    public function updateStatus(Request $request, Ticket $ticket)
-    {
+    public function updateStatus(UpdateTicketStatusRequest $request, Ticket $ticket)
+{
     if ($request->user()->cannot('update', $ticket)) {
         return response()->json([
             'message' => 'Unauthorized'
         ], 403);
     }
 
-    $request->validate([
-        'status' => 'required|in:open,in_progress,resolved,closed',
-    ]);
-
-    $ticket->update([
-        'status' => $request->status,
-    ]);
+    $ticket->update($request->validated());
 
     return response()->json([
         'message' => 'Ticket status updated successfully',

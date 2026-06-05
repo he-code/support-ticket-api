@@ -12,7 +12,7 @@ class UpdateTicketStatusRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return false;
+        return true;
     }
 
     /**
@@ -23,10 +23,7 @@ class UpdateTicketStatusRequest extends FormRequest
     public function rules(): array
 {
     return [
-        'title' => 'sometimes|string|max:255',
-        'description' => 'sometimes|string',
-        'status' => 'sometimes|in:open,in_progress,resolved,closed',
-        'priority' => 'sometimes|in:low,medium,high',
+        'status' => 'required|in:open,in_progress,resolved,closed',
     ];
 }
 }
