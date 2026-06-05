@@ -14,11 +14,11 @@ RESTful API for managing support tickets built with Laravel and MySQL.
 
 ## Tech Stack
 
-- Laravel 12
-- PHP 8+
-- MySQL
+- Laravel 13
+- PHP 8.3+
+- SQLite/MySQL
 - Laravel Sanctum
-- Eloquent ORM
+- L5 Swagger
 
 ## Installation
 
