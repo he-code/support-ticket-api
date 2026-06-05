@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Ticket;
 use Illuminate\Http\Request;
-use App\Http\Requests\StoreticketRequest;
+use App\Http\Requests\StoreTicketRequest;
 use App\Http\Resources\TicketResource;
 use Illuminate\Support\Facades\Auth;
 use OpenApi\Attributes as OA;
@@ -84,7 +84,7 @@ use App\Http\Requests\UpdateTicketStatusRequest;
 
 
     // Crear ticket
-    public function store(StoreticketRequest $request)
+    public function store(StoreTicketRequest $request)
     {
     $validated = $request->validated();
 
