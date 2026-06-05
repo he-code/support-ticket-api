@@ -9,6 +9,7 @@ use App\Http\Resources\TicketResource;
 use Illuminate\Support\Facades\Auth;
 use OpenApi\Attributes as OA;
 use App\Http\Requests\UpdateTicketRequest;
+use App\Http\Requests\UpdateTicketStatusRequest;
 
     class TicketController extends Controller
     {
@@ -26,49 +27,61 @@ use App\Http\Requests\UpdateTicketRequest;
     )]
     // Listar tickets
     public function index(Request $request)
-    {
-        //Filtrar por status
-        $query= Ticket::where('user_id', $request->user()->id);
-        if ($request->filled('status')) {
-            $query->where('status', $request->status);
-        }
+{
+    // 1. Base de la consulta vinculada al usuario (Siempre protegida)
+    $query = Ticket::where('user_id', $request->user()->id);
 
-        //Filtrar por prioridad
-        if ($request->filled('priority')) {
-            $query->where('priority', $request->priority);
+    // 2. Filtrar por status
+    if ($request->filled('status')) {
+        $query->where('status', $request->status);
     }
 
-        //Buscar por título o descripción
-        if ($request->filled('search')) {
-            $query->where('title', 'like', '%' . $request->search . '%')
-                   ->orWhere('description', 'like', '%' . $request->search . '%');
-        }
-
-        //Ordenar por fecha de creación
-        $short= $request->get('sort_by', 'created_at');
-        $shortDirection= $request->get('sort_direction', 'desc');
-
-        $allowedSorts = ['created_at', 'title', 'priority', 'status'];
-        if (!in_array($short, $allowedSorts)) {
-            $query->orderBy('created_at', 'desc');
-        } else {
-            $query->orderBy($short, $shortDirection);
-        }
-
-        $tickets = $query->latest()->paginate(10);
-
-        return response()->json([
-            'tickets' => TicketResource::collection($tickets),
-            'pagination' => [
-                'total' => $tickets->total(),
-                'per_page' => $tickets->perPage(),
-                'current_page' => $tickets->currentPage(),
-                'last_page' => $tickets->lastPage(),
-                'from' => $tickets->firstItem(),
-                'to' => $tickets->lastItem(),
-            ],
-        ]);
+    // 3. Filtrar por prioridad
+    if ($request->filled('priority')) {
+        $query->where('priority', $request->priority);
     }
+
+    // 4. Buscar por título o descripción (Agrupado en un closure seguro)
+    if ($request->filled('search')) {
+    $search = $request->search;
+
+    $query->where(function ($q) use ($search) {
+        $q->where('title', 'like', '%' . $search . '%')
+          ->orWhere('description', 'like', '%' . $search . '%');
+    });
+}
+
+    // 5. Ordenar dinámicamente
+    $sort = $request->get('sort_by', 'created_at');
+    $sortDirection = $request->get('sort_direction', 'desc');
+
+    // Forzar dirección válida
+    $sortDirection = in_array(strtolower($sortDirection), ['asc', 'desc']) ? $sortDirection : 'desc';
+
+    $allowedSorts = ['created_at', 'title', 'priority', 'status'];
+    
+    if (in_array($sort, $allowedSorts)) {
+        $query->orderBy($sort, $sortDirection);
+    } else {
+        $query->orderBy('created_at', 'desc');
+    }
+
+    // 6. Paginación (Se eliminó latest() para no romper el orden anterior)
+    $tickets = $query->paginate(10);
+
+    return response()->json([
+        'tickets' => TicketResource::collection($tickets),
+        'pagination' => [
+            'total'        => $tickets->total(),
+            'per_page'     => $tickets->perPage(),
+            'current_page' => $tickets->currentPage(),
+            'last_page'    => $tickets->lastPage(),
+            'from'         => $tickets->firstItem(),
+            'to'           => $tickets->lastItem(),
+        ],
+    ]);
+}
+
 
     // Crear ticket
     public function store(StoreticketRequest $request)
@@ -85,21 +98,6 @@ use App\Http\Requests\UpdateTicketRequest;
     ], 201);
     }
 
-    public function updateStatus(Request $request, Ticket $ticket)
-    {
-    $request->validate([
-        'status' => 'required|in:open,in_progress,resolved,closed',
-    ]);
-
-    $ticket->update([
-        'status' => $request->status,
-    ]);
-
-    return response()->json([
-        'message' => 'Ticket status updated successfully',
-        'ticket' => new TicketResource($ticket)
-    ]);
-    }
 
     // Mostrar ticket individual
     public function show(Ticket $ticket)
@@ -116,16 +114,13 @@ use App\Http\Requests\UpdateTicketRequest;
     }
 
     // Actualizar ticket
-   public function update(UpdateTicketRequest $request, string $id)
-    {
-    $ticket = Ticket::findOrFail($id);
-
+   public function update(UpdateTicketRequest $request, Ticket $ticket)
+{
     if ($request->user()->cannot('update', $ticket)) {
         return response()->json([
             'message' => 'Unauthorized'
         ], 403);
     }
-
 
     $ticket->update($request->validated());
 
@@ -133,13 +128,35 @@ use App\Http\Requests\UpdateTicketRequest;
         'message' => 'Ticket updated successfully',
         'ticket' => new TicketResource($ticket)
     ]);
+}
+
+
+    //Actualizar solo el estado del ticket
+    public function updateStatus(Request $request, Ticket $ticket)
+    {
+    if ($request->user()->cannot('update', $ticket)) {
+        return response()->json([
+            'message' => 'Unauthorized'
+        ], 403);
     }
 
-    // Eliminar ticket
-    public function destroy(Request $request, string $id)
-    {
-    $ticket = Ticket::findOrFail($id);
+    $request->validate([
+        'status' => 'required|in:open,in_progress,resolved,closed',
+    ]);
 
+    $ticket->update([
+        'status' => $request->status,
+    ]);
+
+    return response()->json([
+        'message' => 'Ticket status updated successfully',
+        'ticket' => new TicketResource($ticket)
+    ]);
+}
+
+    // Eliminar ticket
+    public function destroy(Request $request, Ticket $ticket)
+{
     if ($request->user()->cannot('delete', $ticket)) {
         return response()->json([
             'message' => 'Unauthorized'
@@ -151,5 +168,5 @@ use App\Http\Requests\UpdateTicketRequest;
     return response()->json([
         'message' => 'Ticket deleted successfully'
     ]);
-    }
+}
 }
