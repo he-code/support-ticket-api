@@ -10,6 +10,7 @@ use App\Http\Controllers\TicketActivityController;
 use App\Http\Controllers\TicketAttachmentController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\ProfileController;
 
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
@@ -22,6 +23,11 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Listado de agentes de soporte
     Route::get('/support-agents', [SupportAgentController::class, 'index']);
+
+    // Perfil del usuario
+    Route::get('/me', [ProfileController::class, 'me']);
+    Route::patch('/profile', [ProfileController::class, 'update']);
+    Route::patch('/password', [ProfileController::class, 'changePassword']);
 
     // Notificaciones
     Route::get('/notifications', [NotificationController::class, 'index']);
