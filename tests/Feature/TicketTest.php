@@ -490,4 +490,75 @@ class TicketTest extends TestCase
 
     $response->assertJsonValidationErrors(['priority']);
     }
+
+    public function test_support_agent_can_list_all_tickets(): void
+    {
+    $agent = User::factory()->create([
+        'role' => 'support_agent',
+    ]);
+
+    $userOne = User::factory()->create();
+    $userTwo = User::factory()->create();
+
+    Ticket::factory()->create([
+        'user_id' => $userOne->id,
+        'title' => 'Ticket usuario uno',
+    ]);
+
+    Ticket::factory()->create([
+        'user_id' => $userTwo->id,
+        'title' => 'Ticket usuario dos',
+    ]);
+
+    Sanctum::actingAs($agent);
+
+    $response = $this->getJson('/api/tickets');
+
+    $response->assertOk();
+    $response->assertJsonPath('pagination.total', 2);
+    }
+
+    public function test_support_agent_can_show_any_ticket(): void
+    {
+    $agent = User::factory()->create([
+        'role' => 'support_agent',
+    ]);
+
+    $owner = User::factory()->create();
+
+    $ticket = Ticket::factory()->create([
+        'user_id' => $owner->id,
+        'title' => 'Ticket visible para agente',
+    ]);
+
+    Sanctum::actingAs($agent);
+
+    $response = $this->getJson("/api/tickets/{$ticket->id}");
+
+    $response->assertOk();
+    $response->assertJsonPath('ticket.title', 'Ticket visible para agente');
+    }
+
+    public function test_admin_can_delete_any_ticket(): void
+    {
+    $admin = User::factory()->create([
+        'role' => 'admin',
+    ]);
+
+    $owner = User::factory()->create();
+
+    $ticket = Ticket::factory()->create([
+        'user_id' => $owner->id,
+    ]);
+
+    Sanctum::actingAs($admin);
+
+    $response = $this->deleteJson("/api/tickets/{$ticket->id}");
+
+    $response->assertOk();
+
+    $this->assertDatabaseMissing('tickets', [
+        'id' => $ticket->id,
+    ]);
+    }
 }

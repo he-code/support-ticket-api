@@ -12,7 +12,7 @@ class TicketCommentController extends Controller
 {
     public function index(Request $request, Ticket $ticket)
     {
-        if ($ticket->user_id !== $request->user()->id) {
+        if (! $request->user()->isStaff() && $ticket->user_id !== $request->user()->id) {
             return response()->json([
                 'message' => 'Unauthorized',
             ], 403);
@@ -38,7 +38,7 @@ class TicketCommentController extends Controller
 
     public function store(StoreTicketCommentRequest $request, Ticket $ticket)
     {
-        if ($ticket->user_id !== $request->user()->id) {
+        if (! $request->user()->isStaff() && $ticket->user_id !== $request->user()->id) {
             return response()->json([
                 'message' => 'Unauthorized',
             ], 403);
@@ -59,22 +59,25 @@ class TicketCommentController extends Controller
 
     public function destroy(Request $request, Ticket $ticket, TicketComment $comment)
     {
-        if ($ticket->user_id !== $request->user()->id) {
-            return response()->json([
-                'message' => 'Unauthorized',
-            ], 403);
-        }
-
         if ($comment->ticket_id !== $ticket->id) {
             return response()->json([
                 'message' => 'Comment not found for this ticket',
             ], 404);
         }
 
-        $comment->delete();
+        if (
+            ! $request->user()->isAdmin()
+            && $comment->user_id !== $request->user()->id
+        ) {
+            return response()->json([
+                'message' => 'Unauthorized',
+            ], 403);
+        }
 
-        return response()->json([
-            'message' => 'Comment deleted successfully',
-        ]);
+    $comment->delete();
+
+    return response()->json([
+        'message' => 'Comment deleted successfully',
+    ]);
     }
 }

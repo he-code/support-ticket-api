@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
+
 class TicketCommentTest extends TestCase
 {
     use RefreshDatabase;
@@ -19,7 +20,7 @@ class TicketCommentTest extends TestCase
         $ticket = Ticket::factory()->create([
             'user_id' => $user->id,
         ]);
-
+        /** @var \App\Models\User $user */
         $response = $this->actingAs($user)->postJson("/api/tickets/{$ticket->id}/comments", [
             'body' => 'This is a test comment.',
         ]);
@@ -55,6 +56,7 @@ class TicketCommentTest extends TestCase
             'user_id' => $owner->id,
         ]);
 
+        /** @var \App\Models\User $otherUser */
         $response = $this->actingAs($otherUser)->postJson("/api/tickets/{$ticket->id}/comments", [
             'body' => 'Trying to comment.',
         ]);
@@ -80,6 +82,7 @@ class TicketCommentTest extends TestCase
             'user_id' => $user->id,
         ]);
 
+        /** @var \App\Models\User $user */
         $response = $this->actingAs($user)->getJson("/api/tickets/{$ticket->id}/comments");
 
         $response->assertOk()
@@ -98,6 +101,7 @@ class TicketCommentTest extends TestCase
             'user_id' => $owner->id,
         ]);
 
+        /** @var \App\Models\User $otherUser */
         $response = $this->actingAs($otherUser)->getJson("/api/tickets/{$ticket->id}/comments");
 
         $response->assertForbidden();
@@ -116,6 +120,7 @@ class TicketCommentTest extends TestCase
             'user_id' => $user->id,
         ]);
 
+        /** @var \App\Models\User $user */
         $response = $this->actingAs($user)
             ->deleteJson("/api/tickets/{$ticket->id}/comments/{$comment->id}");
 
@@ -135,11 +140,39 @@ class TicketCommentTest extends TestCase
             'user_id' => $user->id,
         ]);
 
+        /** @var \App\Models\User $user */
         $response = $this->actingAs($user)->postJson("/api/tickets/{$ticket->id}/comments", [
             'body' => '',
         ]);
 
         $response->assertUnprocessable()
             ->assertJsonValidationErrors(['body']);
+    }
+
+    public function test_support_agent_can_comment_on_any_ticket(): void
+    {
+    $agent = User::factory()->create([
+        'role' => 'support_agent',
+    ]);
+
+    $owner = User::factory()->create();
+
+    $ticket = Ticket::factory()->create([
+        'user_id' => $owner->id,
+    ]);
+
+    /** @var \App\Models\User $agent */
+    $response = $this->actingAs($agent)->postJson("/api/tickets/{$ticket->id}/comments", [
+        'body' => 'Respuesta del agente de soporte.',
+    ]);
+
+    $response->assertCreated()
+        ->assertJsonPath('comment.body', 'Respuesta del agente de soporte.');
+
+    $this->assertDatabaseHas('ticket_comments', [
+        'ticket_id' => $ticket->id,
+        'user_id' => $agent->id,
+        'body' => 'Respuesta del agente de soporte.',
+    ]);
     }
 }

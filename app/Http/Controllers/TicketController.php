@@ -6,7 +6,6 @@ use App\Models\Ticket;
 use Illuminate\Http\Request;
 use App\Http\Requests\StoreTicketRequest;
 use App\Http\Resources\TicketResource;
-use Illuminate\Support\Facades\Auth;
 use OpenApi\Attributes as OA;
 use App\Http\Requests\UpdateTicketRequest;
 use App\Http\Requests\UpdateTicketStatusRequest;
@@ -32,8 +31,11 @@ class TicketController extends Controller
         $filters=$request->validated();
 
     // 1. Base de la consulta vinculada al usuario (Siempre protegida)
-    $query = Ticket::with('user')
-        ->where('user_id', $request->user()->id);
+    $query = Ticket::with('user');
+
+    if (! $request->user()->isStaff()) {
+        $query->where('user_id', $request->user()->id);
+    }
 
     // 2. Filtrar por status
     if (! empty($filters['status'])) {
@@ -106,17 +108,19 @@ class TicketController extends Controller
 
 
     // Mostrar ticket individual
-    public function show(Ticket $ticket)
+   public function show(Request $request, Ticket $ticket)
     {
-        //Verificar que el ticket pertenezca al usuario autenticado
-        if($ticket->user_id !== Auth::id()){
+        if ($request->user()->cannot('view', $ticket)) {
             return response()->json([
-                'message' => 'Unauthorized'
+                'message' => 'Unauthorized',
             ], 403);
-        }
-        return response()->json([
-            'ticket' => new TicketResource($ticket)
-        ]);
+    }
+
+    $ticket->load('user');
+
+    return response()->json([
+        'ticket' => new TicketResource($ticket),
+    ]);
     }
 
     // Actualizar ticket

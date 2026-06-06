@@ -13,7 +13,7 @@ class TicketPolicy
      */
     public function viewAny(User $user): bool
     {
-        return false;
+        return true;
     }
 
     /**
@@ -21,7 +21,7 @@ class TicketPolicy
      */
     public function view(User $user, Ticket $ticket): bool
     {
-        return $user->id === $ticket->user_id;
+    return $user->isStaff() || $user->id === $ticket->user_id;
     }
 
     /**
@@ -29,7 +29,7 @@ class TicketPolicy
      */
     public function create(User $user): bool
     {
-        return false;
+        return true;
     }
 
     /**
@@ -37,15 +37,15 @@ class TicketPolicy
      */
     public function update(User $user, Ticket $ticket): bool
     {
-        return $user->id === $ticket->user_id;
+    return $user->isStaff() || $user->id === $ticket->user_id;
     }
 
     /**
      * Determine whether the user can delete the model.
      */
-    public function delete(User $user, Ticket $ticket): bool
+   public function delete(User $user, Ticket $ticket): bool
     {
-        return $user->id === $ticket->user_id;
+    return $user->isAdmin() || $user->id === $ticket->user_id;
     }
 
     /**
