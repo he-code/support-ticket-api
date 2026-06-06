@@ -11,7 +11,7 @@ use OpenApi\Attributes as OA;
 use App\Http\Requests\UpdateTicketRequest;
 use App\Http\Requests\UpdateTicketStatusRequest;
 
-    class TicketController extends Controller
+class TicketController extends Controller
     {
     #[OA\Get(
     path: '/api/tickets',
@@ -27,9 +27,10 @@ use App\Http\Requests\UpdateTicketStatusRequest;
     )]
     // Listar tickets
     public function index(Request $request)
-{
+    {
     // 1. Base de la consulta vinculada al usuario (Siempre protegida)
-    $query = Ticket::where('user_id', $request->user()->id);
+    $query = Ticket::with('user')
+        ->where('user_id', $request->user()->id);
 
     // 2. Filtrar por status
     if ($request->filled('status')) {
@@ -49,7 +50,7 @@ use App\Http\Requests\UpdateTicketStatusRequest;
         $q->where('title', 'like', '%' . $search . '%')
           ->orWhere('description', 'like', '%' . $search . '%');
     });
-}
+    }
 
     // 5. Ordenar dinámicamente
     $sort = $request->get('sort_by', 'created_at');
@@ -80,7 +81,7 @@ use App\Http\Requests\UpdateTicketStatusRequest;
             'to'           => $tickets->lastItem(),
         ],
     ]);
-}
+    }
 
 
     // Crear ticket
@@ -92,6 +93,8 @@ use App\Http\Requests\UpdateTicketStatusRequest;
 
     $ticket = Ticket::create($validated);
 
+    $ticket->load ('user');
+    
     return response()->json([
         'message' => 'Ticket created successfully',
         'ticket' => new TicketResource($ticket)
@@ -115,7 +118,7 @@ use App\Http\Requests\UpdateTicketStatusRequest;
 
     // Actualizar ticket
    public function update(UpdateTicketRequest $request, Ticket $ticket)
-{
+    {
     if ($request->user()->cannot('update', $ticket)) {
         return response()->json([
             'message' => 'Unauthorized'
@@ -124,16 +127,18 @@ use App\Http\Requests\UpdateTicketStatusRequest;
 
     $ticket->update($request->validated());
 
+    $ticket->load('user');
+
     return response()->json([
-        'message' => 'Ticket updated successfully',
-        'ticket' => new TicketResource($ticket)
+    'message' => 'Ticket updated successfully',
+    'ticket' => new TicketResource($ticket),
     ]);
-}
+    }
 
 
     //Actualizar solo el estado del ticket
     public function updateStatus(UpdateTicketStatusRequest $request, Ticket $ticket)
-{
+    {
     if ($request->user()->cannot('update', $ticket)) {
         return response()->json([
             'message' => 'Unauthorized'
@@ -141,12 +146,14 @@ use App\Http\Requests\UpdateTicketStatusRequest;
     }
 
     $ticket->update($request->validated());
+
+    $ticket->load('user');
 
     return response()->json([
         'message' => 'Ticket status updated successfully',
         'ticket' => new TicketResource($ticket)
     ]);
-}
+    }
 
     // Eliminar ticket
     public function destroy(Request $request, Ticket $ticket)
