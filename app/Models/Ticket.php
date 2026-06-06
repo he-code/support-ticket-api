@@ -15,11 +15,17 @@ class Ticket extends Model
         'status',
         'priority',
         'user_id',
+        'assigned_to_id',
     ];
 
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function assignedTo()
+    {
+        return $this->belongsTo(User::class, 'assigned_to_id');
     }
 
     public function comments()

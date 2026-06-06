@@ -11,6 +11,7 @@ use App\Http\Requests\UpdateTicketRequest;
 use App\Http\Requests\UpdateTicketStatusRequest;
 use App\Http\Requests\IndexTicketRequest;
 use App\Models\TicketComment;
+use App\Http\Requests\AssignTicketRequest;
 
 class TicketController extends Controller
     {
@@ -32,7 +33,7 @@ class TicketController extends Controller
         $filters=$request->validated();
 
     // 1. Base de la consulta vinculada al usuario (Siempre protegida)
-    $query = Ticket::with('user');
+    $query = Ticket::with(['user', 'assignedTo']);
 
     if (! $request->user()->isStaff()) {
         $query->where('user_id', $request->user()->id);
@@ -99,7 +100,7 @@ class TicketController extends Controller
 
     $ticket = Ticket::create($validated);
 
-    $ticket->load ('user');
+    $ticket->load (['user', 'assignedTo']);
     
     return response()->json([
         'message' => 'Ticket created successfully',
@@ -117,7 +118,7 @@ class TicketController extends Controller
         ], 403);
     }
 
-    $ticket->load('user');
+    $ticket->load(['user', 'assignedTo']);
 
     return response()->json([
         'ticket' => new TicketResource($ticket),
@@ -135,7 +136,7 @@ class TicketController extends Controller
 
     $ticket->update($request->validated());
 
-    $ticket->load('user');
+    $ticket->load(['user', 'assignedTo']);
 
     return response()->json([
     'message' => 'Ticket updated successfully',
@@ -155,11 +156,33 @@ class TicketController extends Controller
 
     $ticket->update($request->validated());
 
-    $ticket->load('user');
+    $ticket->load(['user', 'assignedTo']);
 
     return response()->json([
         'message' => 'Ticket status updated successfully',
         'ticket' => new TicketResource($ticket)
+    ]);
+    }
+
+    public function assign(AssignTicketRequest $request, Ticket $ticket)
+    {
+    if ($request->user()->cannot('assign', $ticket)) {
+        return response()->json([
+            'message' => 'Unauthorized',
+        ], 403);
+    }
+
+    $ticket->update([
+        'assigned_to_id' => $request->validated()['assigned_to_id'] ?? null,
+    ]);
+
+    $ticket->load(['user', 'assignedTo']);
+
+    return response()->json([
+        'message' => $ticket->assigned_to_id
+            ? 'Ticket assigned successfully'
+            : 'Ticket unassigned successfully',
+        'ticket' => new TicketResource($ticket),
     ]);
     }
 

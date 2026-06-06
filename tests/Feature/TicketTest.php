@@ -583,4 +583,143 @@ class TicketTest extends TestCase
             'id' => $ticket->id,
         ]);
     }
+
+    public function test_support_agent_can_assign_ticket_to_support_agent(): void
+    {
+    /** @var User $agent */
+    $agent = User::factory()->supportAgent()->create();
+
+    /** @var User $assignedAgent */
+    $assignedAgent = User::factory()->supportAgent()->create();
+
+    /** @var User $owner */
+    $owner = User::factory()->create();
+
+    $ticket = Ticket::factory()->create([
+        'user_id' => $owner->id,
+    ]);
+
+    $response = $this->actingAs($agent)->patchJson("/api/tickets/{$ticket->id}/assign", [
+        'assigned_to_id' => $assignedAgent->id,
+    ]);
+
+    $response->assertOk()
+        ->assertJsonPath('message', 'Ticket assigned successfully')
+        ->assertJsonPath('ticket.assigned_to.id', $assignedAgent->id);
+
+    $this->assertDatabaseHas('tickets', [
+        'id' => $ticket->id,
+        'assigned_to_id' => $assignedAgent->id,
+    ]);
+    }
+
+    public function test_admin_can_assign_ticket_to_support_agent(): void
+    {
+    /** @var User $admin */
+    $admin = User::factory()->admin()->create();
+
+    /** @var User $assignedAgent */
+    $assignedAgent = User::factory()->supportAgent()->create();
+
+    /** @var User $owner */
+    $owner = User::factory()->create();
+
+    $ticket = Ticket::factory()->create([
+        'user_id' => $owner->id,
+    ]);
+
+    $response = $this->actingAs($admin)->patchJson("/api/tickets/{$ticket->id}/assign", [
+        'assigned_to_id' => $assignedAgent->id,
+    ]);
+
+    $response->assertOk()
+        ->assertJsonPath('message', 'Ticket assigned successfully');
+
+    $this->assertDatabaseHas('tickets', [
+        'id' => $ticket->id,
+        'assigned_to_id' => $assignedAgent->id,
+    ]);
+    }
+
+    public function test_regular_user_cannot_assign_ticket(): void
+    {
+    /** @var User $user */
+    $user = User::factory()->create();
+
+    /** @var User $assignedAgent */
+    $assignedAgent = User::factory()->supportAgent()->create();
+
+    $ticket = Ticket::factory()->create([
+        'user_id' => $user->id,
+    ]);
+
+    $response = $this->actingAs($user)->patchJson("/api/tickets/{$ticket->id}/assign", [
+        'assigned_to_id' => $assignedAgent->id,
+    ]);
+
+    $response->assertForbidden();
+
+    $this->assertDatabaseHas('tickets', [
+        'id' => $ticket->id,
+        'assigned_to_id' => null,
+    ]);
+    }
+
+    public function test_ticket_cannot_be_assigned_to_regular_user(): void
+    {
+    /** @var User $agent */
+    $agent = User::factory()->supportAgent()->create();
+
+    /** @var User $regularUser */
+    $regularUser = User::factory()->create();
+
+    /** @var User $owner */
+    $owner = User::factory()->create();
+
+    $ticket = Ticket::factory()->create([
+        'user_id' => $owner->id,
+    ]);
+
+    $response = $this->actingAs($agent)->patchJson("/api/tickets/{$ticket->id}/assign", [
+        'assigned_to_id' => $regularUser->id,
+    ]);
+
+    $response->assertUnprocessable()
+        ->assertJsonValidationErrors(['assigned_to_id']);
+
+    $this->assertDatabaseHas('tickets', [
+        'id' => $ticket->id,
+        'assigned_to_id' => null,
+    ]);
+    }
+
+    public function test_support_agent_can_unassign_ticket(): void
+    {
+    /** @var User $agent */
+    $agent = User::factory()->supportAgent()->create();
+
+    /** @var User $assignedAgent */
+    $assignedAgent = User::factory()->supportAgent()->create();
+
+    /** @var User $owner */
+    $owner = User::factory()->create();
+
+    $ticket = Ticket::factory()->create([
+        'user_id' => $owner->id,
+        'assigned_to_id' => $assignedAgent->id,
+    ]);
+
+    $response = $this->actingAs($agent)->patchJson("/api/tickets/{$ticket->id}/assign", [
+        'assigned_to_id' => null,
+    ]);
+
+    $response->assertOk()
+        ->assertJsonPath('message', 'Ticket unassigned successfully')
+        ->assertJsonPath('ticket.assigned_to', null);
+
+    $this->assertDatabaseHas('tickets', [
+        'id' => $ticket->id,
+        'assigned_to_id' => null,
+    ]);
+    }
 }

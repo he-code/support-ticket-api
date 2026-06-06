@@ -48,6 +48,11 @@ class TicketPolicy
     return $user->isAdmin() || $user->id === $ticket->user_id;
     }
 
+    public function assign(User $user, Ticket $ticket): bool
+    {
+        return $user->isStaff();
+    }
+
     /**
      * Determine whether the user can restore the model.
      */

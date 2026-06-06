@@ -10,6 +10,8 @@ class TicketFactory extends Factory
     public function definition(): array
     {
         return [
+            'user_id' => User::factory(),
+            'assigned_to_id' => null,
             'title' => fake()->sentence(3),
             'description' => fake()->paragraph(),
             'status' => fake()->randomElement([
@@ -23,7 +25,7 @@ class TicketFactory extends Factory
                 'medium',
                 'high',
             ]),
-            'user_id' => User::factory(),
+            
         ];
     }
 }

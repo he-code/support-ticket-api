@@ -14,19 +14,25 @@ class TicketResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-    return [
-        'id' => $this->id,
-        'title' => $this->title,
-        'description' => $this->description,
-        'status' => $this->status,
-        'priority' => $this->priority,
+        return [
+            'id' => $this->id,
+            'title' => $this->title,
+            'description' => $this->description,
+            'status' => $this->status,
+            'priority' => $this->priority,
 
-       'created_by' => [
-            'id' => $this->user->id,
-            'name' => $this->user->name,
-        ],
+            'created_by' => [
+                'id' => $this->user->id,
+                'name' => $this->user->name,
+            ],
 
-        'created_at' => $this->created_at->format('Y-m-d H:i:s')
-    ];
+            'assigned_to' => $this->assignedTo ? [
+                'id' => $this->assignedTo->id,
+                'name' => $this->assignedTo->name,
+                'email' => $this->assignedTo->email,
+            ] : null,
+
+            'created_at' => $this->created_at->format('Y-m-d H:i:s'),
+        ];
     }
 }
