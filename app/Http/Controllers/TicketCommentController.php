@@ -59,20 +59,20 @@ class TicketCommentController extends Controller
 
     public function destroy(Request $request, Ticket $ticket, TicketComment $comment)
     {
-        if ($comment->ticket_id !== $ticket->id) {
-            return response()->json([
-                'message' => 'Comment not found for this ticket',
-            ], 404);
-        }
+    if ($comment->ticket_id !== $ticket->id) {
+        return response()->json([
+            'message' => 'Comment not found for this ticket',
+        ], 404);
+    }
 
-        if (
-            ! $request->user()->isAdmin()
-            && $comment->user_id !== $request->user()->id
-        ) {
-            return response()->json([
-                'message' => 'Unauthorized',
-            ], 403);
-        }
+    if (
+        ! $request->user()->isAdmin()
+        && $comment->user_id !== $request->user()->id
+    ) {
+        return response()->json([
+            'message' => 'Unauthorized',
+        ], 403);
+    }
 
     $comment->delete();
 

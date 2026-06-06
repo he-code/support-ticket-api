@@ -175,4 +175,62 @@ class TicketCommentTest extends TestCase
         'body' => 'Respuesta del agente de soporte.',
     ]);
     }
+    
+    public function test_admin_can_delete_any_comment(): void
+    {
+    /** @var User $admin */
+    $admin = User::factory()->admin()->create();
+
+    /** @var User $owner */
+    $owner = User::factory()->create();
+
+    /** @var User $agent */
+    $agent = User::factory()->supportAgent()->create();
+
+    $ticket = Ticket::factory()->create([
+        'user_id' => $owner->id,
+    ]);
+
+    $comment = TicketComment::factory()->create([
+        'ticket_id' => $ticket->id,
+        'user_id' => $agent->id,
+    ]);
+
+    $response = $this->actingAs($admin)
+        ->deleteJson("/api/tickets/{$ticket->id}/comments/{$comment->id}");
+
+    $response->assertOk()
+        ->assertJsonPath('message', 'Comment deleted successfully');
+
+    $this->assertDatabaseMissing('ticket_comments', [
+        'id' => $comment->id,
+    ]);
+    }
+
+    public function test_user_cannot_delete_support_agent_comment(): void
+    {
+        /** @var User $owner */
+        $owner = User::factory()->create();
+
+        /** @var User $agent */
+        $agent = User::factory()->supportAgent()->create();
+
+        $ticket = Ticket::factory()->create([
+            'user_id' => $owner->id,
+        ]);
+
+        $comment = TicketComment::factory()->create([
+            'ticket_id' => $ticket->id,
+            'user_id' => $agent->id,
+        ]);
+
+        $response = $this->actingAs($owner)
+            ->deleteJson("/api/tickets/{$ticket->id}/comments/{$comment->id}");
+
+        $response->assertForbidden();
+
+        $this->assertDatabaseHas('ticket_comments', [
+            'id' => $comment->id,
+        ]);
+    }
 }

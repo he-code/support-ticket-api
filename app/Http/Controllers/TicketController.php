@@ -10,6 +10,7 @@ use OpenApi\Attributes as OA;
 use App\Http\Requests\UpdateTicketRequest;
 use App\Http\Requests\UpdateTicketStatusRequest;
 use App\Http\Requests\IndexTicketRequest;
+use App\Models\TicketComment;
 
 class TicketController extends Controller
     {
@@ -110,10 +111,10 @@ class TicketController extends Controller
     // Mostrar ticket individual
    public function show(Request $request, Ticket $ticket)
     {
-        if ($request->user()->cannot('view', $ticket)) {
-            return response()->json([
-                'message' => 'Unauthorized',
-            ], 403);
+    if ($request->user()->cannot('view', $ticket)) {
+        return response()->json([
+            'message' => 'Unauthorized',
+        ], 403);
     }
 
     $ticket->load('user');
@@ -127,9 +128,9 @@ class TicketController extends Controller
    public function update(UpdateTicketRequest $request, Ticket $ticket)
     {
     if ($request->user()->cannot('update', $ticket)) {
-        return response()->json([
-            'message' => 'Unauthorized'
-        ], 403);
+    return response()->json([
+        'message' => 'Unauthorized',
+    ], 403);
     }
 
     $ticket->update($request->validated());
@@ -146,10 +147,10 @@ class TicketController extends Controller
     //Actualizar solo el estado del ticket
     public function updateStatus(UpdateTicketStatusRequest $request, Ticket $ticket)
     {
-    if ($request->user()->cannot('update', $ticket)) {
-        return response()->json([
-            'message' => 'Unauthorized'
-        ], 403);
+   if ($request->user()->cannot('update', $ticket)) {
+    return response()->json([
+        'message' => 'Unauthorized',
+    ], 403);
     }
 
     $ticket->update($request->validated());
@@ -167,14 +168,14 @@ class TicketController extends Controller
     {
     if ($request->user()->cannot('delete', $ticket)) {
         return response()->json([
-            'message' => 'Unauthorized'
+            'message' => 'Unauthorized',
         ], 403);
     }
 
     $ticket->delete();
 
     return response()->json([
-        'message' => 'Ticket deleted successfully'
+        'message' => 'Ticket deleted successfully',
     ]);
     }
 }

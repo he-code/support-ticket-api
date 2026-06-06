@@ -493,11 +493,13 @@ class TicketTest extends TestCase
 
     public function test_support_agent_can_list_all_tickets(): void
     {
-    $agent = User::factory()->create([
-        'role' => 'support_agent',
-    ]);
+    /** @var User $agent */
+    $agent = User::factory()->supportAgent()->create();
 
+    /** @var User $userOne */
     $userOne = User::factory()->create();
+
+    /** @var User $userTwo */
     $userTwo = User::factory()->create();
 
     Ticket::factory()->create([
@@ -510,55 +512,75 @@ class TicketTest extends TestCase
         'title' => 'Ticket usuario dos',
     ]);
 
-    Sanctum::actingAs($agent);
+    $response = $this->actingAs($agent)->getJson('/api/tickets');
 
-    $response = $this->getJson('/api/tickets');
-
-    $response->assertOk();
-    $response->assertJsonPath('pagination.total', 2);
+    $response->assertOk()
+        ->assertJsonPath('pagination.total', 2);
     }
 
     public function test_support_agent_can_show_any_ticket(): void
     {
-    $agent = User::factory()->create([
-        'role' => 'support_agent',
-    ]);
+        /** @var User $agent */
+        $agent = User::factory()->supportAgent()->create();
 
-    $owner = User::factory()->create();
+        /** @var User $owner */
+        $owner = User::factory()->create();
 
-    $ticket = Ticket::factory()->create([
-        'user_id' => $owner->id,
-        'title' => 'Ticket visible para agente',
-    ]);
+        $ticket = Ticket::factory()->create([
+            'user_id' => $owner->id,
+            'title' => 'Ticket visible para agente',
+        ]);
 
-    Sanctum::actingAs($agent);
+        $response = $this->actingAs($agent)->getJson("/api/tickets/{$ticket->id}");
 
-    $response = $this->getJson("/api/tickets/{$ticket->id}");
+        $response->assertOk()
+            ->assertJsonPath('ticket.title', 'Ticket visible para agente');
+    }
 
-    $response->assertOk();
-    $response->assertJsonPath('ticket.title', 'Ticket visible para agente');
+    public function test_support_agent_can_update_any_ticket_status(): void
+    {
+        /** @var User $agent */
+        $agent = User::factory()->supportAgent()->create();
+
+        /** @var User $owner */
+        $owner = User::factory()->create();
+
+        $ticket = Ticket::factory()->create([
+            'user_id' => $owner->id,
+            'status' => 'open',
+        ]);
+
+        $response = $this->actingAs($agent)->patchJson("/api/tickets/{$ticket->id}/status", [
+            'status' => 'closed',
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('ticket.status', 'closed');
+
+        $this->assertDatabaseHas('tickets', [
+            'id' => $ticket->id,
+            'status' => 'closed',
+        ]);
     }
 
     public function test_admin_can_delete_any_ticket(): void
     {
-    $admin = User::factory()->create([
-        'role' => 'admin',
-    ]);
+        /** @var User $admin */
+        $admin = User::factory()->admin()->create();
 
-    $owner = User::factory()->create();
+        /** @var User $owner */
+        $owner = User::factory()->create();
 
-    $ticket = Ticket::factory()->create([
-        'user_id' => $owner->id,
-    ]);
+        $ticket = Ticket::factory()->create([
+            'user_id' => $owner->id,
+        ]);
 
-    Sanctum::actingAs($admin);
+        $response = $this->actingAs($admin)->deleteJson("/api/tickets/{$ticket->id}");
 
-    $response = $this->deleteJson("/api/tickets/{$ticket->id}");
+        $response->assertOk();
 
-    $response->assertOk();
-
-    $this->assertDatabaseMissing('tickets', [
-        'id' => $ticket->id,
-    ]);
+        $this->assertDatabaseMissing('tickets', [
+            'id' => $ticket->id,
+        ]);
     }
 }
