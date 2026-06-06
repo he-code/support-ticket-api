@@ -15,6 +15,7 @@ class Ticket extends Model
         'status',
         'priority',
         'user_id',
+        'category_id',
         'assigned_to_id',
     ];
 
@@ -33,6 +34,11 @@ class Ticket extends Model
         return $this->hasMany(TicketComment::class);
     }
 
+    public function category()
+    {
+        return $this->belongsTo(TicketCategory::class, 'category_id');
+    }
+    
     public function activities()
     {
         return $this->hasMany(TicketActivity::class);

@@ -14,6 +14,7 @@ class IndexTicketRequest extends FormRequest
    public function rules(): array
     {
     return [
+        'category_id' => 'nullable|integer|exists:ticket_categories,id',
         'status' => 'nullable|in:open,in_progress,resolved,closed',
         'priority' => 'nullable|in:low,medium,high',
         'search' => 'nullable|string|max:255',

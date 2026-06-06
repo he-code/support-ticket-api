@@ -36,12 +36,17 @@ class TicketController extends Controller
         $filters = $request->validated();
 
         // Consulta base: cargamos el usuario creador y el agente asignado para evitar N+1 queries
-        $query = Ticket::with(['user', 'assignedTo']);
+        $query = Ticket::with(['user', 'assignedTo', 'category']);
 
         // Seguridad principal:
         // Si el usuario autenticado NO es staff, solo puede ver sus propios tickets
         if (! $request->user()->isStaff()) {
             $query->where('user_id', $request->user()->id);
+        }
+
+        // Filtrar por categoría
+        if (! empty($filters['category_id'])) {
+            $query->where('category_id', $filters['category_id']);
         }
 
         // Filtrar por estado del ticket
@@ -143,7 +148,7 @@ class TicketController extends Controller
         );
 
         // Cargamos relaciones para devolver una respuesta completa
-        $ticket->load(['user', 'assignedTo']);
+        $ticket->load(['user', 'assignedTo', 'category']);
 
         return response()->json([
             'message' => 'Ticket created successfully',
@@ -162,7 +167,7 @@ class TicketController extends Controller
         }
 
         // Cargamos relaciones necesarias para el recurso
-        $ticket->load(['user', 'assignedTo']);
+        $ticket->load(['user', 'assignedTo', 'category']);
 
         return response()->json([
             'ticket' => new TicketResource($ticket),
@@ -213,7 +218,7 @@ class TicketController extends Controller
         }
 
         // Cargamos relaciones para devolver una respuesta completa
-        $ticket->load(['user', 'assignedTo']);
+        $ticket->load(['user', 'assignedTo', 'category']);
 
         return response()->json([
             'message' => 'Ticket updated successfully',
@@ -257,7 +262,7 @@ class TicketController extends Controller
         }
 
         // Cargamos relaciones para devolver una respuesta completa
-        $ticket->load(['user', 'assignedTo']);
+        $ticket->load(['user', 'assignedTo', 'category']);
 
         return response()->json([
             'message' => 'Ticket status updated successfully',
@@ -307,7 +312,7 @@ class TicketController extends Controller
         $assignedUser?->notify(new TicketAssignedNotification($ticket));
     }
         // Cargamos relaciones para devolver una respuesta completa
-        $ticket->load(['user', 'assignedTo']);
+        $ticket->load(['user', 'assignedTo', 'category']);
 
         return response()->json([
             'message' => $ticket->assigned_to_id

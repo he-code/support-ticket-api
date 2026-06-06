@@ -11,6 +11,7 @@ use App\Http\Controllers\TicketAttachmentController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\TicketCategoryController;
 
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
@@ -38,6 +39,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/users', [UserController::class, 'index']);
     Route::patch('/users/{user}/role', [UserController::class, 'updateRole']);
 
+    // Gestión de categorías de tickets
+    Route::apiResource('ticket-categories', TicketCategoryController::class);
+    
     // Tickets
     Route::apiResource('tickets', TicketController::class);
 

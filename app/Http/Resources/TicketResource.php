@@ -33,6 +33,12 @@ class TicketResource extends JsonResource
             ] : null,
 
             'created_at' => $this->created_at->format('Y-m-d H:i:s'),
+
+            'category' => $this->category ? [
+            'id' => $this->category->id,
+            'name' => $this->category->name,
+            'description' => $this->category->description,
+            ] : null,
         ];
     }
 }
