@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Auth;
 use OpenApi\Attributes as OA;
 use App\Http\Requests\UpdateTicketRequest;
 use App\Http\Requests\UpdateTicketStatusRequest;
+use App\Http\Requests\IndexTicketRequest;
 
 class TicketController extends Controller
     {
@@ -26,35 +27,37 @@ class TicketController extends Controller
     ]
     )]
     // Listar tickets
-    public function index(Request $request)
+    public function index(IndexTicketRequest $request)
     {
+        $filters=$request->validated();
+
     // 1. Base de la consulta vinculada al usuario (Siempre protegida)
     $query = Ticket::with('user')
         ->where('user_id', $request->user()->id);
 
     // 2. Filtrar por status
-    if ($request->filled('status')) {
-        $query->where('status', $request->status);
+    if (! empty($filters['status'])) {
+    $query->where('status', $filters['status']);
     }
 
     // 3. Filtrar por prioridad
-    if ($request->filled('priority')) {
-        $query->where('priority', $request->priority);
+    if (! empty($filters['priority'])) {
+    $query->where('priority', $filters['priority']);
     }
 
     // 4. Buscar por título o descripción (Agrupado en un closure seguro)
-    if ($request->filled('search')) {
-    $search = $request->search;
+    if (! empty($filters['search'])) {
+    $search = $filters['search'];
 
     $query->where(function ($q) use ($search) {
         $q->where('title', 'like', '%' . $search . '%')
-          ->orWhere('description', 'like', '%' . $search . '%');
+            ->orWhere('description', 'like', '%' . $search . '%');
     });
     }
 
     // 5. Ordenar dinámicamente
-    $sort = $request->get('sort_by', 'created_at');
-    $sortDirection = $request->get('sort_direction', 'desc');
+    $sort = $filters['sort_by'] ?? 'created_at';
+    $sortDirection = $filters['sort_direction'] ?? 'desc';
 
     // Forzar dirección válida
     $sortDirection = in_array(strtolower($sortDirection), ['asc', 'desc']) ? $sortDirection : 'desc';
