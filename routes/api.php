@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\TicketActivityController;
 use App\Http\Controllers\TicketAttachmentController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\UserController;
 
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
@@ -26,6 +27,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/notifications', [NotificationController::class, 'index']);
     Route::patch('/notifications/read-all', [NotificationController::class, 'markAllAsRead']);
     Route::patch('/notifications/{notification}/read', [NotificationController::class, 'markAsRead']);
+
+    // Gestión de usuarios (solo para admin)
+    Route::get('/users', [UserController::class, 'index']);
+    Route::patch('/users/{user}/role', [UserController::class, 'updateRole']);
 
     // Tickets
     Route::apiResource('tickets', TicketController::class);
