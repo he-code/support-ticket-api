@@ -31,6 +31,11 @@ Route::middleware('auth:sanctum')->group(function () {
     // Historial de actividades de un ticket
     Route::get('/tickets/{ticket}/activities', [TicketActivityController::class, 'index']);
     
+    Route::get(
+    '/tickets/{ticket}/attachments/{attachment}/download',
+    [TicketAttachmentController::class, 'download']
+    );
+
     Route::apiResource('tickets.attachments', TicketAttachmentController::class)
     ->only(['index', 'store', 'destroy']);
     

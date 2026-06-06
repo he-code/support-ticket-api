@@ -21,6 +21,7 @@ class TicketAttachmentController extends Controller
             ], 403);
         }
 
+        // Listamos los adjuntos del ticket con el usuario que los subió
         $attachments = $ticket->attachments()
             ->with('user')
             ->latest()
@@ -49,11 +50,13 @@ class TicketAttachmentController extends Controller
             ], 403);
         }
 
+        // Obtenemos el archivo enviado en el campo "file"
         $file = $request->file('file');
 
-        // Guardamos el archivo en storage/app/ticket-attachments
+        // Guardamos el archivo dentro de storage/app/ticket-attachments
         $path = $file->store('ticket-attachments');
 
+        // Creamos el registro del adjunto en base de datos
         $attachment = $ticket->attachments()->create([
             'user_id' => $request->user()->id,
             'original_name' => $file->getClientOriginalName(),
@@ -84,14 +87,14 @@ class TicketAttachmentController extends Controller
     // Eliminar adjunto de un ticket
     public function destroy(Request $request, Ticket $ticket, TicketAttachment $attachment)
     {
-        // Validamos que el adjunto pertenezca al ticket indicado
+        // Validamos que el adjunto realmente pertenezca al ticket de la URL
         if ($attachment->ticket_id !== $ticket->id) {
             return response()->json([
                 'message' => 'Attachment not found for this ticket',
             ], 404);
         }
 
-        // Puede eliminarlo el admin o quien subió el archivo
+        // Puede eliminar el adjunto el admin o el usuario que lo subió
         if (
             ! $request->user()->isAdmin()
             && $attachment->user_id !== $request->user()->id
@@ -101,6 +104,7 @@ class TicketAttachmentController extends Controller
             ], 403);
         }
 
+        // Guardamos datos antes de eliminar para registrarlos en la actividad
         $attachmentId = $attachment->id;
         $originalName = $attachment->original_name;
         $filePath = $attachment->file_path;
@@ -108,7 +112,7 @@ class TicketAttachmentController extends Controller
         // Eliminamos el archivo físico del storage
         Storage::delete($filePath);
 
-        // Eliminamos el registro de base de datos
+        // Eliminamos el registro de la base de datos
         $attachment->delete();
 
         // Registramos actividad en el historial del ticket
@@ -125,5 +129,36 @@ class TicketAttachmentController extends Controller
         return response()->json([
             'message' => 'Attachment deleted successfully',
         ]);
+    }
+
+    // Descargar adjunto de forma segura
+    public function download(Request $request, Ticket $ticket, TicketAttachment $attachment)
+    {
+    // Solo puede descargar adjuntos quien puede ver el ticket
+    if ($request->user()->cannot('view', $ticket)) {
+        return response()->json([
+            'message' => 'Unauthorized',
+        ], 403);
+    }
+
+    // Validamos que el adjunto realmente pertenezca al ticket de la URL
+    if ($attachment->ticket_id !== $ticket->id) {
+        return response()->json([
+            'message' => 'Attachment not found for this ticket',
+        ], 404);
+    }
+
+    // Validamos que el archivo físico exista en storage
+    if (! Storage::exists($attachment->file_path)) {
+        return response()->json([
+            'message' => 'Attachment file not found',
+        ], 404);
+    }
+
+    // Descargamos el archivo usando su nombre original
+    return Storage::download(
+        $attachment->file_path,
+        $attachment->original_name
+    );
     }
 }
