@@ -49,6 +49,15 @@ class TicketCommentController extends Controller
             'body' => $request->validated()['body'],
         ]);
 
+        $ticket->recordActivity(
+        type: 'comment_created',
+        user: $request->user(),
+        description: 'Comment added to ticket',
+        metadata: [
+            'comment_id' => $comment->id,
+        ]
+);
+
         $comment->load('user');
 
         return response()->json([
@@ -74,7 +83,19 @@ class TicketCommentController extends Controller
         ], 403);
     }
 
+    
+    $commentId = $comment->id;
+
     $comment->delete();
+
+    $ticket->recordActivity(
+        type: 'comment_deleted',
+        user: $request->user(),
+        description: 'Comment deleted from ticket',
+        metadata: [
+            'comment_id' => $commentId,
+        ]
+    );
 
     return response()->json([
         'message' => 'Comment deleted successfully',

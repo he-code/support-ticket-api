@@ -6,6 +6,7 @@ use App\Http\Controllers\SupportAgentController;
 use App\Http\Controllers\TicketCommentController;
 use App\Http\Controllers\TicketController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\TicketActivityController;
 
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
@@ -26,6 +27,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('/tickets/{ticket}/status', [TicketController::class, 'updateStatus']);
     Route::patch('/tickets/{ticket}/assign', [TicketController::class, 'assign']);
 
+    // Historial de actividades de un ticket
+    Route::get('/tickets/{ticket}/activities', [TicketActivityController::class, 'index']);
     // Comentarios de tickets
     Route::apiResource('tickets.comments', TicketCommentController::class)
         ->only(['index', 'store', 'destroy']);

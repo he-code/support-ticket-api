@@ -32,4 +32,28 @@ class Ticket extends Model
     {
         return $this->hasMany(TicketComment::class);
     }
+
+    public function activities()
+    {
+        return $this->hasMany(TicketActivity::class);
+    }
+
+    public function recordActivity(
+    string $type,
+    ?User $user = null,
+    ?string $description = null,
+    ?string $oldValue = null,
+    ?string $newValue = null,
+    ?array $metadata = null
+    ): TicketActivity {
+    return $this->activities()->create([
+        'user_id' => $user?->id,
+        'type' => $type,
+        'description' => $description,
+        'old_value' => $oldValue,
+        'new_value' => $newValue,
+        'metadata' => $metadata,
+    ]);
+    }
+
 }
