@@ -38,6 +38,11 @@ class Ticket extends Model
         return $this->hasMany(TicketActivity::class);
     }
 
+     public function attachments()
+    {
+        return $this->hasMany(TicketAttachment::class);
+    }
+
     public function recordActivity(
     string $type,
     ?User $user = null,
@@ -55,5 +60,7 @@ class Ticket extends Model
         'metadata' => $metadata,
     ]);
     }
+
+   
 
 }
