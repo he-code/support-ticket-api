@@ -8,6 +8,9 @@ use App\Http\Requests\StoreTicketRequest;
 use App\Http\Requests\UpdateTicketRequest;
 use App\Http\Requests\UpdateTicketStatusRequest;
 use App\Http\Resources\TicketResource;
+use App\Models\User;
+use App\Notifications\TicketAssignedNotification;
+use App\Notifications\TicketStatusChangedNotification;
 use App\Models\Ticket;
 use Illuminate\Http\Request;
 use OpenApi\Attributes as OA;
@@ -237,14 +240,20 @@ class TicketController extends Controller
         ]);
 
         // Si el estado realmente cambió, registramos actividad
+        $ticket->loadMissing('user'); // Aseguramos que la relación user esté cargada para la notificación
+        
         if ($oldStatus !== $ticket->status) {
-            $ticket->recordActivity(
-                type: 'status_changed',
-                user: $request->user(),
-                description: 'Ticket status changed',
-                oldValue: $oldStatus,
-                newValue: $ticket->status
-            );
+        $ticket->recordActivity(
+            type: 'status_changed',
+            user: $request->user(),
+            description: 'Ticket status changed',
+            oldValue: $oldStatus,
+            newValue: $ticket->status
+        );
+
+        $ticket->user?->notify(
+            new TicketStatusChangedNotification($ticket, $oldStatus, $ticket->status)
+        );
         }
 
         // Cargamos relaciones para devolver una respuesta completa
@@ -291,6 +300,12 @@ class TicketController extends Controller
             );
         }
 
+        // Enviar notificación si el ticket fue asignado
+        if ($newAssignedToId) {
+        $assignedUser = User::find($newAssignedToId);
+
+        $assignedUser?->notify(new TicketAssignedNotification($ticket));
+    }
         // Cargamos relaciones para devolver una respuesta completa
         $ticket->load(['user', 'assignedTo']);
 

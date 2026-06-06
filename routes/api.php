@@ -8,6 +8,7 @@ use App\Http\Controllers\TicketController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\TicketActivityController;
 use App\Http\Controllers\TicketAttachmentController;
+use App\Http\Controllers\NotificationController;
 
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
@@ -20,6 +21,11 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Listado de agentes de soporte
     Route::get('/support-agents', [SupportAgentController::class, 'index']);
+
+    // Notificaciones
+    Route::get('/notifications', [NotificationController::class, 'index']);
+    Route::patch('/notifications/read-all', [NotificationController::class, 'markAllAsRead']);
+    Route::patch('/notifications/{notification}/read', [NotificationController::class, 'markAsRead']);
 
     // Tickets
     Route::apiResource('tickets', TicketController::class);

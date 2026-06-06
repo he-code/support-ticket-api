@@ -7,6 +7,7 @@ use App\Http\Resources\TicketCommentResource;
 use App\Models\Ticket;
 use App\Models\TicketComment;
 use Illuminate\Http\Request;
+use App\Notifications\TicketCommentCreatedNotification;
 
 class TicketCommentController extends Controller
 {
@@ -56,7 +57,13 @@ class TicketCommentController extends Controller
         metadata: [
             'comment_id' => $comment->id,
         ]
-);
+    );
+        // Notificar al propietario del ticket si el comentario fue creado por un agente
+        $ticket->loadMissing('user');
+
+        if ($ticket->user_id !== $request->user()->id) {
+            $ticket->user?->notify(new TicketCommentCreatedNotification($ticket));
+        }
 
         $comment->load('user');
 
