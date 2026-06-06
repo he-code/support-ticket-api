@@ -21,9 +21,9 @@ class UpdateTicketStatusRequest extends FormRequest
      * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
-{
+    {
     return [
         'status' => 'required|in:open,in_progress,resolved,closed',
     ];
-}
+    }
 }

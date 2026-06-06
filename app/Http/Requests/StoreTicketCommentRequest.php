@@ -5,7 +5,7 @@ namespace App\Http\Requests;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
-class UpdateTicketRequest extends FormRequest
+class StoreTicketCommentRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -22,11 +22,8 @@ class UpdateTicketRequest extends FormRequest
      */
     public function rules(): array
     {
-    return [
-        'title' => 'sometimes|string|max:255',
-        'description' => 'sometimes|string',
-        'status' => 'sometimes|in:open,in_progress,resolved,closed',
-        'priority' => 'sometimes|in:low,medium,high',
-    ];
+        return [
+            'body' => 'required|string|min:2|max:5000',
+        ];
     }
 }

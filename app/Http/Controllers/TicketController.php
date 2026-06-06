@@ -160,7 +160,7 @@ class TicketController extends Controller
 
     // Eliminar ticket
     public function destroy(Request $request, Ticket $ticket)
-{
+    {
     if ($request->user()->cannot('delete', $ticket)) {
         return response()->json([
             'message' => 'Unauthorized'
@@ -172,5 +172,5 @@ class TicketController extends Controller
     return response()->json([
         'message' => 'Ticket deleted successfully'
     ]);
-}
+    }
 }
