@@ -294,4 +294,174 @@ class TicketTest extends TestCase
         'id' => $ticket->id,
     ]);
     }
+
+    public function test_authenticated_user_can_filter_tickets_by_status(): void
+    {
+    $user = User::factory()->create();
+
+    Ticket::factory()->create([
+        'user_id' => $user->id,
+        'title' => 'Ticket abierto',
+        'status' => 'open',
+    ]);
+
+    Ticket::factory()->create([
+        'user_id' => $user->id,
+        'title' => 'Ticket resuelto',
+        'status' => 'resolved',
+    ]);
+
+    Sanctum::actingAs($user);
+
+    $response = $this->getJson('/api/tickets?status=resolved');
+
+    $response->assertStatus(200);
+
+    $response->assertJsonPath('pagination.total', 1);
+    $response->assertJsonPath('tickets.0.title', 'Ticket resuelto');
+    $response->assertJsonPath('tickets.0.status', 'resolved');
+
+    $response->assertJsonMissing([
+        'title' => 'Ticket abierto',
+    ]);
+    }
+
+    public function test_authenticated_user_can_filter_tickets_by_priority(): void
+    {
+    $user = User::factory()->create();
+
+    Ticket::factory()->create([
+        'user_id' => $user->id,
+        'title' => 'Ticket baja prioridad',
+        'priority' => 'low',
+    ]);
+
+    Ticket::factory()->create([
+        'user_id' => $user->id,
+        'title' => 'Ticket alta prioridad',
+        'priority' => 'high',
+    ]);
+
+    Sanctum::actingAs($user);
+
+    $response = $this->getJson('/api/tickets?priority=high');
+
+    $response->assertStatus(200);
+
+    $response->assertJsonPath('pagination.total', 1);
+    $response->assertJsonPath('tickets.0.title', 'Ticket alta prioridad');
+    $response->assertJsonPath('tickets.0.priority', 'high');
+
+    $response->assertJsonMissing([
+        'title' => 'Ticket baja prioridad',
+    ]);
+    }
+
+    public function test_authenticated_user_can_search_tickets_by_title_or_description(): void
+    {
+    $user = User::factory()->create();
+
+    Ticket::factory()->create([
+        'user_id' => $user->id,
+        'title' => 'Error al iniciar sesión',
+        'description' => 'No puedo entrar con mi contraseña.',
+    ]);
+
+    Ticket::factory()->create([
+        'user_id' => $user->id,
+        'title' => 'Problema con impresora',
+        'description' => 'La impresora no responde.',
+    ]);
+
+    Sanctum::actingAs($user);
+
+    $response = $this->getJson('/api/tickets?search=contraseña');
+
+    $response->assertStatus(200);
+
+    $response->assertJsonPath('pagination.total', 1);
+    $response->assertJsonPath('tickets.0.title', 'Error al iniciar sesión');
+
+    $response->assertJsonMissing([
+        'title' => 'Problema con impresora',
+    ]);
+    }
+    public function test_authenticated_user_can_sort_tickets_by_title(): void
+    {
+    $user = User::factory()->create();
+
+    Ticket::factory()->create([
+        'user_id' => $user->id,
+        'title' => 'Zebra ticket',
+    ]);
+
+    Ticket::factory()->create([
+        'user_id' => $user->id,
+        'title' => 'Alpha ticket',
+    ]);
+
+    Sanctum::actingAs($user);
+
+    $response = $this->getJson('/api/tickets?sort_by=title&sort_direction=asc');
+
+    $response->assertStatus(200);
+
+    $response->assertJsonPath('pagination.total', 2);
+    $response->assertJsonPath('tickets.0.title', 'Alpha ticket');
+    $response->assertJsonPath('tickets.1.title', 'Zebra ticket');
+    }
+
+    public function test_authenticated_user_gets_default_sort_when_sort_by_is_invalid(): void
+    {
+    $user = User::factory()->create();
+
+    $oldTicket = Ticket::factory()->create([
+        'user_id' => $user->id,
+        'title' => 'Ticket antiguo',
+        'created_at' => now()->subDay(),
+    ]);
+
+    $newTicket = Ticket::factory()->create([
+        'user_id' => $user->id,
+        'title' => 'Ticket nuevo',
+        'created_at' => now(),
+    ]);
+
+    Sanctum::actingAs($user);
+
+    $response = $this->getJson('/api/tickets?sort_by=invalid_column&sort_direction=asc');
+
+    $response->assertStatus(200);
+
+    $response->assertJsonPath('pagination.total', 2);
+    $response->assertJsonPath('tickets.0.id', $newTicket->id);
+    $response->assertJsonPath('tickets.1.id', $oldTicket->id);
+    }
+
+    public function test_authenticated_user_gets_default_sort_direction_when_sort_direction_is_invalid(): void
+    {
+    $user = User::factory()->create();
+
+    $oldTicket = Ticket::factory()->create([
+        'user_id' => $user->id,
+        'title' => 'Ticket antiguo',
+        'created_at' => now()->subDay(),
+    ]);
+
+    $newTicket = Ticket::factory()->create([
+        'user_id' => $user->id,
+        'title' => 'Ticket nuevo',
+        'created_at' => now(),
+    ]);
+
+    Sanctum::actingAs($user);
+
+    $response = $this->getJson('/api/tickets?sort_by=created_at&sort_direction=invalid_direction');
+
+    $response->assertStatus(200);
+
+    $response->assertJsonPath('pagination.total', 2);
+    $response->assertJsonPath('tickets.0.id', $newTicket->id);
+    $response->assertJsonPath('tickets.1.id', $oldTicket->id);
+    }
 }
