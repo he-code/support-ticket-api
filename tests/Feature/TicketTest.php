@@ -722,4 +722,138 @@ class TicketTest extends TestCase
         'assigned_to_id' => null,
     ]);
     }
+
+    public function test_support_agent_can_filter_tickets_assigned_to_me(): void
+    {
+    /** @var User $agent */
+    $agent = User::factory()->supportAgent()->create();
+
+    /** @var User $otherAgent */
+    $otherAgent = User::factory()->supportAgent()->create();
+
+    /** @var User $owner */
+    $owner = User::factory()->create();
+
+    Ticket::factory()->create([
+        'user_id' => $owner->id,
+        'assigned_to_id' => $agent->id,
+        'title' => 'Ticket asignado a mí',
+    ]);
+
+    Ticket::factory()->create([
+        'user_id' => $owner->id,
+        'assigned_to_id' => $otherAgent->id,
+        'title' => 'Ticket asignado a otro',
+    ]);
+
+    $response = $this->actingAs($agent)->getJson('/api/tickets?assigned=me');
+
+    $response->assertOk()
+        ->assertJsonPath('pagination.total', 1)
+        ->assertJsonPath('tickets.0.title', 'Ticket asignado a mí');
+    }
+
+    public function test_staff_can_filter_unassigned_tickets(): void
+    {
+    /** @var User $agent */
+    $agent = User::factory()->supportAgent()->create();
+
+    /** @var User $assignedAgent */
+    $assignedAgent = User::factory()->supportAgent()->create();
+
+    /** @var User $owner */
+    $owner = User::factory()->create();
+
+    Ticket::factory()->create([
+        'user_id' => $owner->id,
+        'assigned_to_id' => null,
+        'title' => 'Ticket sin asignar',
+    ]);
+
+    Ticket::factory()->create([
+        'user_id' => $owner->id,
+        'assigned_to_id' => $assignedAgent->id,
+        'title' => 'Ticket asignado',
+    ]);
+
+    $response = $this->actingAs($agent)->getJson('/api/tickets?assigned=unassigned');
+
+    $response->assertOk()
+        ->assertJsonPath('pagination.total', 1)
+        ->assertJsonPath('tickets.0.title', 'Ticket sin asignar');
+    }
+
+    public function test_admin_can_filter_tickets_by_assigned_agent_id(): void
+    {
+    /** @var User $admin */
+    $admin = User::factory()->admin()->create();
+
+    /** @var User $agent */
+    $agent = User::factory()->supportAgent()->create();
+
+    /** @var User $otherAgent */
+    $otherAgent = User::factory()->supportAgent()->create();
+
+    /** @var User $owner */
+    $owner = User::factory()->create();
+
+    Ticket::factory()->create([
+        'user_id' => $owner->id,
+        'assigned_to_id' => $agent->id,
+        'title' => 'Ticket del agente filtrado',
+    ]);
+
+    Ticket::factory()->create([
+        'user_id' => $owner->id,
+        'assigned_to_id' => $otherAgent->id,
+        'title' => 'Ticket de otro agente',
+    ]);
+
+    $response = $this->actingAs($admin)->getJson("/api/tickets?assigned_to_id={$agent->id}");
+
+    $response->assertOk()
+        ->assertJsonPath('pagination.total', 1)
+        ->assertJsonPath('tickets.0.title', 'Ticket del agente filtrado');
+    }
+
+    public function test_user_cannot_see_other_users_tickets_even_when_filtering_by_assignment(): void
+    {
+    /** @var User $user */
+    $user = User::factory()->create();
+
+    /** @var User $otherUser */
+    $otherUser = User::factory()->create();
+
+    /** @var User $agent */
+    $agent = User::factory()->supportAgent()->create();
+
+    Ticket::factory()->create([
+        'user_id' => $user->id,
+        'assigned_to_id' => $agent->id,
+        'title' => 'Mi ticket asignado',
+    ]);
+
+    Ticket::factory()->create([
+        'user_id' => $otherUser->id,
+        'assigned_to_id' => $agent->id,
+        'title' => 'Ticket ajeno asignado',
+    ]);
+
+    $response = $this->actingAs($user)->getJson("/api/tickets?assigned_to_id={$agent->id}");
+
+    $response->assertOk()
+        ->assertJsonPath('pagination.total', 1)
+        ->assertJsonPath('tickets.0.title', 'Mi ticket asignado');
+    }
+
+    public function test_cannot_filter_tickets_by_invalid_assigned_value(): void
+    {
+    /** @var User $agent */
+    $agent = User::factory()->supportAgent()->create();
+
+    $response = $this->actingAs($agent)->getJson('/api/tickets?assigned=random');
+
+    $response->assertUnprocessable()
+        ->assertJsonValidationErrors(['assigned']);
+    }
 }

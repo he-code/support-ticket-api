@@ -30,62 +30,93 @@ class TicketController extends Controller
     // Listar tickets
     public function index(IndexTicketRequest $request)
     {
-        $filters=$request->validated();
+    // Obtenemos únicamente los filtros ya validados por IndexTicketRequest
+    $filters = $request->validated();
 
-    // 1. Base de la consulta vinculada al usuario (Siempre protegida)
+    // Consulta base: cargamos el usuario creador y el agente asignado para evitar N+1 queries
     $query = Ticket::with(['user', 'assignedTo']);
 
+    // Seguridad principal:
+    // Si el usuario autenticado NO es staff, solo puede ver sus propios tickets
     if (! $request->user()->isStaff()) {
         $query->where('user_id', $request->user()->id);
     }
 
-    // 2. Filtrar por status
+    // Filtrar por estado del ticket
     if (! empty($filters['status'])) {
-    $query->where('status', $filters['status']);
+        $query->where('status', $filters['status']);
     }
 
-    // 3. Filtrar por prioridad
+    // Filtrar por prioridad del ticket
     if (! empty($filters['priority'])) {
-    $query->where('priority', $filters['priority']);
+        $query->where('priority', $filters['priority']);
     }
 
-    // 4. Buscar por título o descripción (Agrupado en un closure seguro)
+    // Buscar por título o descripción
     if (! empty($filters['search'])) {
-    $search = $filters['search'];
+        $search = $filters['search'];
 
-    $query->where(function ($q) use ($search) {
-        $q->where('title', 'like', '%' . $search . '%')
-            ->orWhere('description', 'like', '%' . $search . '%');
-    });
+        $query->where(function ($q) use ($search) {
+            $q->where('title', 'like', '%' . $search . '%')
+                ->orWhere('description', 'like', '%' . $search . '%');
+        });
     }
 
-    // 5. Ordenar dinámicamente
+    // Filtrar tickets asignados al usuario autenticado
+    // Ejemplo: GET /api/tickets?assigned=me
+    if (! empty($filters['assigned']) && $filters['assigned'] === 'me') {
+        $query->where('assigned_to_id', $request->user()->id);
+    }
+
+    // Filtrar tickets sin asignar
+    // Ejemplo: GET /api/tickets?assigned=unassigned
+    if (! empty($filters['assigned']) && $filters['assigned'] === 'unassigned') {
+        $query->whereNull('assigned_to_id');
+    }
+
+    // Filtrar tickets asignados a un agente específico
+    // Ejemplo: GET /api/tickets?assigned_to_id=3
+    if (! empty($filters['assigned_to_id'])) {
+        $query->where('assigned_to_id', $filters['assigned_to_id']);
+    }
+
+    // Ordenamiento dinámico con valores por defecto
     $sort = $filters['sort_by'] ?? 'created_at';
     $sortDirection = $filters['sort_direction'] ?? 'desc';
 
-    // Forzar dirección válida
-    $sortDirection = in_array(strtolower($sortDirection), ['asc', 'desc']) ? $sortDirection : 'desc';
-
+    // Columnas permitidas para ordenar.
+    // Esto evita que se intente ordenar por columnas no permitidas.
     $allowedSorts = ['created_at', 'title', 'priority', 'status'];
-    
-    if (in_array($sort, $allowedSorts)) {
-        $query->orderBy($sort, $sortDirection);
-    } else {
-        $query->orderBy('created_at', 'desc');
+
+    // Si sort_by es inválido, se ignora también la dirección enviada
+    // y se vuelve al orden por defecto: created_at desc.
+    if (! in_array($sort, $allowedSorts, true)) {
+        $sort = 'created_at';
+        $sortDirection = 'desc';
     }
 
-    // 6. Paginación (Se eliminó latest() para no romper el orden anterior)
+    // Si sort_by es válido pero sort_direction es inválido,
+    // se usa desc como dirección por defecto.
+    if (! in_array(strtolower($sortDirection), ['asc', 'desc'], true)) {
+        $sortDirection = 'desc';
+    }
+
+    // Aplicamos el orden una sola vez
+    $query->orderBy($sort, $sortDirection);
+
+    // Paginación de resultados
     $tickets = $query->paginate(10);
 
+    // Respuesta JSON con tickets y metadatos de paginación
     return response()->json([
         'tickets' => TicketResource::collection($tickets),
         'pagination' => [
-            'total'        => $tickets->total(),
-            'per_page'     => $tickets->perPage(),
+            'total' => $tickets->total(),
+            'per_page' => $tickets->perPage(),
             'current_page' => $tickets->currentPage(),
-            'last_page'    => $tickets->lastPage(),
-            'from'         => $tickets->firstItem(),
-            'to'           => $tickets->lastItem(),
+            'last_page' => $tickets->lastPage(),
+            'from' => $tickets->firstItem(),
+            'to' => $tickets->lastItem(),
         ],
     ]);
     }

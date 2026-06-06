@@ -11,14 +11,19 @@ class IndexTicketRequest extends FormRequest
         return true;
     }
 
-    public function rules(): array
+   public function rules(): array
     {
-        return [
-            'status' => 'nullable|in:open,in_progress,resolved,closed',
-            'priority' => 'nullable|in:low,medium,high',
-            'search' => 'nullable|string|max:255',
-            'sort_by' => 'nullable|string|max:50',
-            'sort_direction' => 'nullable|string|max:50',
-        ];
+    return [
+        'status' => 'nullable|in:open,in_progress,resolved,closed',
+        'priority' => 'nullable|in:low,medium,high',
+        'search' => 'nullable|string|max:255',
+
+        // No usamos "in" aquí porque tus tests esperan fallback, no 422
+        'sort_by' => 'nullable|string',
+        'sort_direction' => 'nullable|string',
+
+        'assigned' => 'nullable|string|in:me,unassigned',
+        'assigned_to_id' => 'nullable|integer|exists:users,id',
+    ];
     }
 }
