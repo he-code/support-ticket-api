@@ -17,6 +17,11 @@ class User extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable;
 
+    public function tickets()
+    {
+        return $this->hasMany(Ticket::class);
+    }
+    
     public function isSupportAgent(): bool
     {
         return $this->role === 'support_agent';
@@ -32,11 +37,7 @@ class User extends Authenticatable
         return in_array($this->role, ['support_agent', 'admin'], true);
     }
 
-    public function tickets()
-    {
-        return $this->hasMany(Ticket::class);
-    }
-
+    
     protected function casts(): array
     {
         return [
