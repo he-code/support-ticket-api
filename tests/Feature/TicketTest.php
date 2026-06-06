@@ -464,4 +464,30 @@ class TicketTest extends TestCase
     $response->assertJsonPath('tickets.0.id', $newTicket->id);
     $response->assertJsonPath('tickets.1.id', $oldTicket->id);
     }
+
+    public function test_authenticated_user_cannot_filter_tickets_by_invalid_status(): void
+    {
+    $user = User::factory()->create();
+
+    Sanctum::actingAs($user);
+
+    $response = $this->getJson('/api/tickets?status=invalid_status');
+
+    $response->assertStatus(422);
+
+    $response->assertJsonValidationErrors(['status']);
+    }
+
+    public function test_authenticated_user_cannot_filter_tickets_by_invalid_priority(): void
+    {
+    $user = User::factory()->create();
+
+    Sanctum::actingAs($user);
+
+    $response = $this->getJson('/api/tickets?priority=urgent');
+
+    $response->assertStatus(422);
+
+    $response->assertJsonValidationErrors(['priority']);
+    }
 }
