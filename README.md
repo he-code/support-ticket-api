@@ -251,6 +251,13 @@ php artisan test tests/Feature/TicketAttachmentTest.php
 php artisan test tests/Feature/NotificationTest.php
 php artisan test tests/Feature/TicketCategoryTest.php
 ```
+## Usuarios demo
+
+Después de ejecutar:
+
+```bash
+php artisan migrate:fresh --seed
+```
 
 ## Formatear código
 
