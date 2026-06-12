@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Http\Controllers;
+
 use OpenApi\Annotations as OA;
 
 /**
@@ -17,8 +18,7 @@ use OpenApi\Annotations as OA;
  *     bearerFormat="JWT"
  * )
  */
-
 abstract class Controller
-    {
-        //
-    }
+{
+    //
+}

@@ -217,4 +217,79 @@ class NotificationTest extends TestCase
 
         $this->assertSame(0, $owner->fresh()->unreadNotifications()->count());
     }
+
+    public function test_owner_comment_creates_notification_for_assigned_agent(): void
+    {
+        /** @var User $owner */
+        $owner = User::factory()->create();
+
+        /** @var User $agent */
+        $agent = User::factory()->supportAgent()->create();
+
+        $ticket = Ticket::factory()->create([
+            'user_id' => $owner->id,
+            'assigned_to_id' => $agent->id,
+        ]);
+
+        $response = $this->actingAs($owner)
+            ->postJson("/api/tickets/{$ticket->id}/comments", [
+                'body' => 'Comentario del dueño para el agente asignado.',
+            ]);
+
+        $response->assertCreated();
+
+        $this->assertSame(1, $agent->fresh()->unreadNotifications()->count());
+        $this->assertSame(0, $owner->fresh()->unreadNotifications()->count());
+
+        $notification = $agent->notifications()->first();
+
+        $this->assertSame('ticket_comment_created', $notification->data['type']);
+        $this->assertSame($ticket->id, $notification->data['ticket_id']);
+    }
+
+    public function test_assigning_ticket_to_same_agent_does_not_create_duplicate_notification(): void
+    {
+        /** @var User $agent */
+        $agent = User::factory()->supportAgent()->create();
+
+        /** @var User $admin */
+        $admin = User::factory()->admin()->create();
+
+        /** @var User $owner */
+        $owner = User::factory()->create();
+
+        $ticket = Ticket::factory()->create([
+            'user_id' => $owner->id,
+            'assigned_to_id' => $agent->id,
+        ]);
+
+        $response = $this->actingAs($admin)
+            ->patchJson("/api/tickets/{$ticket->id}/assign", [
+                'assigned_to_id' => $agent->id,
+            ]);
+
+        $response->assertOk();
+
+        $this->assertSame(0, $agent->fresh()->unreadNotifications()->count());
+    }
+
+    public function test_owner_status_change_does_not_create_notification_for_self(): void
+    {
+        /** @var User $owner */
+        $owner = User::factory()->create();
+
+        $ticket = Ticket::factory()->create([
+            'user_id' => $owner->id,
+            'status' => 'open',
+        ]);
+
+        $response = $this->actingAs($owner)
+            ->patchJson("/api/tickets/{$ticket->id}/status", [
+                'status' => 'closed',
+            ]);
+
+        $response->assertOk();
+
+        $this->assertSame(0, $owner->fresh()->unreadNotifications()->count());
+    }
 }

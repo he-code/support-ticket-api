@@ -134,31 +134,31 @@ class TicketAttachmentController extends Controller
     // Descargar adjunto de forma segura
     public function download(Request $request, Ticket $ticket, TicketAttachment $attachment)
     {
-    // Solo puede descargar adjuntos quien puede ver el ticket
-    if ($request->user()->cannot('view', $ticket)) {
-        return response()->json([
-            'message' => 'Unauthorized',
-        ], 403);
-    }
+        // Solo puede descargar adjuntos quien puede ver el ticket
+        if ($request->user()->cannot('view', $ticket)) {
+            return response()->json([
+                'message' => 'Unauthorized',
+            ], 403);
+        }
 
-    // Validamos que el adjunto realmente pertenezca al ticket de la URL
-    if ($attachment->ticket_id !== $ticket->id) {
-        return response()->json([
-            'message' => 'Attachment not found for this ticket',
-        ], 404);
-    }
+        // Validamos que el adjunto realmente pertenezca al ticket de la URL
+        if ($attachment->ticket_id !== $ticket->id) {
+            return response()->json([
+                'message' => 'Attachment not found for this ticket',
+            ], 404);
+        }
 
-    // Validamos que el archivo físico exista en storage
-    if (! Storage::exists($attachment->file_path)) {
-        return response()->json([
-            'message' => 'Attachment file not found',
-        ], 404);
-    }
+        // Validamos que el archivo físico exista en storage
+        if (! Storage::exists($attachment->file_path)) {
+            return response()->json([
+                'message' => 'Attachment file not found',
+            ], 404);
+        }
 
-    // Descargamos el archivo usando su nombre original
-    return Storage::download(
-        $attachment->file_path,
-        $attachment->original_name
-    );
+        // Descargamos el archivo usando su nombre original
+        return Storage::download(
+            $attachment->file_path,
+            $attachment->original_name
+        );
     }
 }

@@ -38,35 +38,32 @@ class Ticket extends Model
     {
         return $this->belongsTo(TicketCategory::class, 'category_id');
     }
-    
+
     public function activities()
     {
         return $this->hasMany(TicketActivity::class);
     }
 
-     public function attachments()
+    public function attachments()
     {
         return $this->hasMany(TicketAttachment::class);
     }
 
     public function recordActivity(
-    string $type,
-    ?User $user = null,
-    ?string $description = null,
-    ?string $oldValue = null,
-    ?string $newValue = null,
-    ?array $metadata = null
+        string $type,
+        ?User $user = null,
+        ?string $description = null,
+        ?string $oldValue = null,
+        ?string $newValue = null,
+        ?array $metadata = null
     ): TicketActivity {
-    return $this->activities()->create([
-        'user_id' => $user?->id,
-        'type' => $type,
-        'description' => $description,
-        'old_value' => $oldValue,
-        'new_value' => $newValue,
-        'metadata' => $metadata,
-    ]);
+        return $this->activities()->create([
+            'user_id' => $user?->id,
+            'type' => $type,
+            'description' => $description,
+            'old_value' => $oldValue,
+            'new_value' => $newValue,
+            'metadata' => $metadata,
+        ]);
     }
-
-   
-
 }

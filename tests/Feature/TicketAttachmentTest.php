@@ -266,154 +266,154 @@ class TicketAttachmentTest extends TestCase
 
     public function test_ticket_owner_can_download_attachment(): void
     {
-    Storage::fake();
+        Storage::fake();
 
-    /** @var User $user */
-    $user = User::factory()->create();
+        /** @var User $user */
+        $user = User::factory()->create();
 
-    $ticket = Ticket::factory()->create([
-        'user_id' => $user->id,
-    ]);
+        $ticket = Ticket::factory()->create([
+            'user_id' => $user->id,
+        ]);
 
-    $filePath = UploadedFile::fake()
-        ->create('document.pdf', 100, 'application/pdf')
-        ->store('ticket-attachments');
+        $filePath = UploadedFile::fake()
+            ->create('document.pdf', 100, 'application/pdf')
+            ->store('ticket-attachments');
 
-    $attachment = TicketAttachment::factory()->create([
-        'ticket_id' => $ticket->id,
-        'user_id' => $user->id,
-        'original_name' => 'document.pdf',
-        'file_path' => $filePath,
-        'mime_type' => 'application/pdf',
-    ]);
+        $attachment = TicketAttachment::factory()->create([
+            'ticket_id' => $ticket->id,
+            'user_id' => $user->id,
+            'original_name' => 'document.pdf',
+            'file_path' => $filePath,
+            'mime_type' => 'application/pdf',
+        ]);
 
-    $response = $this->actingAs($user)
-        ->getJson("/api/tickets/{$ticket->id}/attachments/{$attachment->id}/download");
+        $response = $this->actingAs($user)
+            ->getJson("/api/tickets/{$ticket->id}/attachments/{$attachment->id}/download");
 
-    $response->assertOk();
+        $response->assertOk();
     }
 
     public function test_user_cannot_download_attachment_from_other_user_ticket(): void
     {
-    Storage::fake();
+        Storage::fake();
 
-    /** @var User $owner */
-    $owner = User::factory()->create();
+        /** @var User $owner */
+        $owner = User::factory()->create();
 
-    /** @var User $otherUser */
-    $otherUser = User::factory()->create();
+        /** @var User $otherUser */
+        $otherUser = User::factory()->create();
 
-    $ticket = Ticket::factory()->create([
-        'user_id' => $owner->id,
-    ]);
+        $ticket = Ticket::factory()->create([
+            'user_id' => $owner->id,
+        ]);
 
-    $filePath = UploadedFile::fake()
-        ->create('document.pdf', 100, 'application/pdf')
-        ->store('ticket-attachments');
+        $filePath = UploadedFile::fake()
+            ->create('document.pdf', 100, 'application/pdf')
+            ->store('ticket-attachments');
 
-    $attachment = TicketAttachment::factory()->create([
-        'ticket_id' => $ticket->id,
-        'user_id' => $owner->id,
-        'original_name' => 'document.pdf',
-        'file_path' => $filePath,
-    ]);
+        $attachment = TicketAttachment::factory()->create([
+            'ticket_id' => $ticket->id,
+            'user_id' => $owner->id,
+            'original_name' => 'document.pdf',
+            'file_path' => $filePath,
+        ]);
 
-    $response = $this->actingAs($otherUser)
-        ->getJson("/api/tickets/{$ticket->id}/attachments/{$attachment->id}/download");
+        $response = $this->actingAs($otherUser)
+            ->getJson("/api/tickets/{$ticket->id}/attachments/{$attachment->id}/download");
 
-    $response->assertForbidden();
+        $response->assertForbidden();
     }
 
     public function test_support_agent_can_download_attachment_from_any_ticket(): void
     {
-    Storage::fake();
+        Storage::fake();
 
-    /** @var User $agent */
-    $agent = User::factory()->supportAgent()->create();
+        /** @var User $agent */
+        $agent = User::factory()->supportAgent()->create();
 
-    /** @var User $owner */
-    $owner = User::factory()->create();
+        /** @var User $owner */
+        $owner = User::factory()->create();
 
-    $ticket = Ticket::factory()->create([
-        'user_id' => $owner->id,
-    ]);
+        $ticket = Ticket::factory()->create([
+            'user_id' => $owner->id,
+        ]);
 
-    $filePath = UploadedFile::fake()
-        ->create('evidence.pdf', 100, 'application/pdf')
-        ->store('ticket-attachments');
+        $filePath = UploadedFile::fake()
+            ->create('evidence.pdf', 100, 'application/pdf')
+            ->store('ticket-attachments');
 
-    $attachment = TicketAttachment::factory()->create([
-        'ticket_id' => $ticket->id,
-        'user_id' => $owner->id,
-        'original_name' => 'evidence.pdf',
-        'file_path' => $filePath,
-    ]);
+        $attachment = TicketAttachment::factory()->create([
+            'ticket_id' => $ticket->id,
+            'user_id' => $owner->id,
+            'original_name' => 'evidence.pdf',
+            'file_path' => $filePath,
+        ]);
 
-    $response = $this->actingAs($agent)
-        ->getJson("/api/tickets/{$ticket->id}/attachments/{$attachment->id}/download");
+        $response = $this->actingAs($agent)
+            ->getJson("/api/tickets/{$ticket->id}/attachments/{$attachment->id}/download");
 
-    $response->assertOk();
+        $response->assertOk();
     }
 
     public function test_cannot_download_attachment_that_does_not_belong_to_ticket(): void
     {
-    Storage::fake();
+        Storage::fake();
 
-    /** @var User $user */
-    $user = User::factory()->create();
+        /** @var User $user */
+        $user = User::factory()->create();
 
-    $ticket = Ticket::factory()->create([
-        'user_id' => $user->id,
-    ]);
-
-    $otherTicket = Ticket::factory()->create([
-        'user_id' => $user->id,
-    ]);
-
-    $filePath = UploadedFile::fake()
-        ->create('wrong-ticket.pdf', 100, 'application/pdf')
-        ->store('ticket-attachments');
-
-    $attachment = TicketAttachment::factory()->create([
-        'ticket_id' => $otherTicket->id,
-        'user_id' => $user->id,
-        'original_name' => 'wrong-ticket.pdf',
-        'file_path' => $filePath,
-    ]);
-
-    $response = $this->actingAs($user)
-        ->getJson("/api/tickets/{$ticket->id}/attachments/{$attachment->id}/download");
-
-    $response->assertNotFound()
-        ->assertJson([
-            'message' => 'Attachment not found for this ticket',
+        $ticket = Ticket::factory()->create([
+            'user_id' => $user->id,
         ]);
+
+        $otherTicket = Ticket::factory()->create([
+            'user_id' => $user->id,
+        ]);
+
+        $filePath = UploadedFile::fake()
+            ->create('wrong-ticket.pdf', 100, 'application/pdf')
+            ->store('ticket-attachments');
+
+        $attachment = TicketAttachment::factory()->create([
+            'ticket_id' => $otherTicket->id,
+            'user_id' => $user->id,
+            'original_name' => 'wrong-ticket.pdf',
+            'file_path' => $filePath,
+        ]);
+
+        $response = $this->actingAs($user)
+            ->getJson("/api/tickets/{$ticket->id}/attachments/{$attachment->id}/download");
+
+        $response->assertNotFound()
+            ->assertJson([
+                'message' => 'Attachment not found for this ticket',
+            ]);
     }
 
     public function test_cannot_download_missing_physical_file(): void
     {
-    Storage::fake();
+        Storage::fake();
 
-    /** @var User $user */
-    $user = User::factory()->create();
+        /** @var User $user */
+        $user = User::factory()->create();
 
-    $ticket = Ticket::factory()->create([
-        'user_id' => $user->id,
-    ]);
-
-    $attachment = TicketAttachment::factory()->create([
-        'ticket_id' => $ticket->id,
-        'user_id' => $user->id,
-        'original_name' => 'missing.pdf',
-        'file_path' => 'ticket-attachments/missing.pdf',
-    ]);
-
-    $response = $this->actingAs($user)
-        ->getJson("/api/tickets/{$ticket->id}/attachments/{$attachment->id}/download");
-
-    $response->assertNotFound()
-        ->assertJson([
-            'message' => 'Attachment file not found',
+        $ticket = Ticket::factory()->create([
+            'user_id' => $user->id,
         ]);
+
+        $attachment = TicketAttachment::factory()->create([
+            'ticket_id' => $ticket->id,
+            'user_id' => $user->id,
+            'original_name' => 'missing.pdf',
+            'file_path' => 'ticket-attachments/missing.pdf',
+        ]);
+
+        $response = $this->actingAs($user)
+            ->getJson("/api/tickets/{$ticket->id}/attachments/{$attachment->id}/download");
+
+        $response->assertNotFound()
+            ->assertJson([
+                'message' => 'Attachment file not found',
+            ]);
     }
 }

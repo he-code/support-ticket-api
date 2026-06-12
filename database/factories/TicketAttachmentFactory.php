@@ -13,8 +13,8 @@ class TicketAttachmentFactory extends Factory
         return [
             'ticket_id' => Ticket::factory(),
             'user_id' => User::factory(),
-            'original_name' => fake()->word() . '.pdf',
-            'file_path' => 'ticket-attachments/' . fake()->uuid() . '.pdf',
+            'original_name' => fake()->word().'.pdf',
+            'file_path' => 'ticket-attachments/'.fake()->uuid().'.pdf',
             'mime_type' => 'application/pdf',
             'size' => fake()->numberBetween(1000, 500000),
         ];

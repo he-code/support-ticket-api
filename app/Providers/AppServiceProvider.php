@@ -2,9 +2,9 @@
 
 namespace App\Providers;
 
-use Illuminate\Support\ServiceProvider;
 use App\Models\Ticket;
 use App\Policies\TicketPolicy;
+use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -23,6 +23,7 @@ class AppServiceProvider extends ServiceProvider
     {
         //
     }
+
     protected $policies = [
         Ticket::class => TicketPolicy::class,
     ];

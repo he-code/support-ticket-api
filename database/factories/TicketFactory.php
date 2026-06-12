@@ -26,7 +26,7 @@ class TicketFactory extends Factory
                 'medium',
                 'high',
             ]),
-            
+
         ];
     }
 }

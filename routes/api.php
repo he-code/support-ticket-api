@@ -2,16 +2,16 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SupportAgentController;
-use App\Http\Controllers\TicketCommentController;
-use App\Http\Controllers\TicketController;
-use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\TicketActivityController;
 use App\Http\Controllers\TicketAttachmentController;
-use App\Http\Controllers\NotificationController;
-use App\Http\Controllers\UserController;
-use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\TicketCategoryController;
+use App\Http\Controllers\TicketCommentController;
+use App\Http\Controllers\TicketController;
+use App\Http\Controllers\UserController;
+use Illuminate\Support\Facades\Route;
 
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
@@ -41,7 +41,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Gestión de categorías de tickets
     Route::apiResource('ticket-categories', TicketCategoryController::class);
-    
+
     // Tickets
     Route::apiResource('tickets', TicketController::class);
 
@@ -51,15 +51,15 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Historial de actividades de un ticket
     Route::get('/tickets/{ticket}/activities', [TicketActivityController::class, 'index']);
-    
+
     Route::get(
-    '/tickets/{ticket}/attachments/{attachment}/download',
-    [TicketAttachmentController::class, 'download']
+        '/tickets/{ticket}/attachments/{attachment}/download',
+        [TicketAttachmentController::class, 'download']
     );
 
     Route::apiResource('tickets.attachments', TicketAttachmentController::class)
-    ->only(['index', 'store', 'destroy']);
-    
+        ->only(['index', 'store', 'destroy']);
+
     // Comentarios de tickets
     Route::apiResource('tickets.comments', TicketCommentController::class)
         ->only(['index', 'store', 'destroy']);

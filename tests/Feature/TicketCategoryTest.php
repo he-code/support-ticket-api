@@ -271,4 +271,88 @@ class TicketCategoryTest extends TestCase
         $response->assertUnprocessable()
             ->assertJsonValidationErrors(['name']);
     }
+
+    public function test_ticket_cannot_be_created_with_inactive_category(): void
+    {
+        /** @var User $user */
+        $user = User::factory()->create();
+
+        $category = TicketCategory::factory()->create([
+            'is_active' => false,
+        ]);
+
+        $response = $this->actingAs($user)->postJson('/api/tickets', [
+            'title' => 'Problema con categoría inactiva',
+            'description' => 'Intento crear un ticket usando una categoría desactivada.',
+            'priority' => 'high',
+            'category_id' => $category->id,
+        ]);
+
+        $response->assertUnprocessable()
+            ->assertJsonValidationErrors(['category_id']);
+    }
+
+    public function test_ticket_category_can_be_updated(): void
+    {
+        /** @var User $user */
+        $user = User::factory()->create();
+
+        $oldCategory = TicketCategory::factory()->create([
+            'is_active' => true,
+        ]);
+
+        $newCategory = TicketCategory::factory()->create([
+            'name' => 'Nueva categoría',
+            'is_active' => true,
+        ]);
+
+        $ticket = Ticket::factory()->create([
+            'user_id' => $user->id,
+            'category_id' => $oldCategory->id,
+        ]);
+
+        $response = $this->actingAs($user)->patchJson("/api/tickets/{$ticket->id}", [
+            'category_id' => $newCategory->id,
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('ticket.category.id', $newCategory->id)
+            ->assertJsonPath('ticket.category.name', 'Nueva categoría');
+
+        $this->assertDatabaseHas('tickets', [
+            'id' => $ticket->id,
+            'category_id' => $newCategory->id,
+        ]);
+    }
+
+    public function test_ticket_cannot_be_updated_with_inactive_category(): void
+    {
+        /** @var User $user */
+        $user = User::factory()->create();
+
+        $activeCategory = TicketCategory::factory()->create([
+            'is_active' => true,
+        ]);
+
+        $inactiveCategory = TicketCategory::factory()->create([
+            'is_active' => false,
+        ]);
+
+        $ticket = Ticket::factory()->create([
+            'user_id' => $user->id,
+            'category_id' => $activeCategory->id,
+        ]);
+
+        $response = $this->actingAs($user)->patchJson("/api/tickets/{$ticket->id}", [
+            'category_id' => $inactiveCategory->id,
+        ]);
+
+        $response->assertUnprocessable()
+            ->assertJsonValidationErrors(['category_id']);
+
+        $this->assertDatabaseHas('tickets', [
+            'id' => $ticket->id,
+            'category_id' => $activeCategory->id,
+        ]);
+    }
 }

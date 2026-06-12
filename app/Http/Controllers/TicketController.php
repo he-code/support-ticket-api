@@ -8,27 +8,14 @@ use App\Http\Requests\StoreTicketRequest;
 use App\Http\Requests\UpdateTicketRequest;
 use App\Http\Requests\UpdateTicketStatusRequest;
 use App\Http\Resources\TicketResource;
+use App\Models\Ticket;
 use App\Models\User;
 use App\Notifications\TicketAssignedNotification;
 use App\Notifications\TicketStatusChangedNotification;
-use App\Models\Ticket;
 use Illuminate\Http\Request;
-use OpenApi\Attributes as OA;
 
 class TicketController extends Controller
 {
-    #[OA\Get(
-        path: '/api/tickets',
-        summary: 'Get all tickets',
-        security: [['bearerAuth' => []]],
-        tags: ['Tickets'],
-        responses: [
-            new OA\Response(
-                response: 200,
-                description: 'List of tickets'
-            )
-        ]
-    )]
     // Listar tickets con filtros, búsqueda, asignación, ordenamiento y paginación
     public function index(IndexTicketRequest $request)
     {
@@ -64,8 +51,8 @@ class TicketController extends Controller
             $search = $filters['search'];
 
             $query->where(function ($q) use ($search) {
-                $q->where('title', 'like', '%' . $search . '%')
-                    ->orWhere('description', 'like', '%' . $search . '%');
+                $q->where('title', 'like', '%'.$search.'%')
+                    ->orWhere('description', 'like', '%'.$search.'%');
             });
         }
 
@@ -191,6 +178,7 @@ class TicketController extends Controller
             'description',
             'status',
             'priority',
+            'category_id',
         ]);
 
         // Actualizamos el ticket con los datos validados
@@ -244,21 +232,24 @@ class TicketController extends Controller
             'status' => $request->validated()['status'],
         ]);
 
-        // Si el estado realmente cambió, registramos actividad
-        $ticket->loadMissing('user'); // Aseguramos que la relación user esté cargada para la notificación
-        
+        // Si hubo cambio real de estado, registramos actividad y notificamos al dueño.
+        // No notificamos al mismo usuario que realizó el cambio.
         if ($oldStatus !== $ticket->status) {
-        $ticket->recordActivity(
-            type: 'status_changed',
-            user: $request->user(),
-            description: 'Ticket status changed',
-            oldValue: $oldStatus,
-            newValue: $ticket->status
-        );
+            $ticket->recordActivity(
+                type: 'status_changed',
+                user: $request->user(),
+                description: 'Ticket status changed',
+                oldValue: $oldStatus,
+                newValue: $ticket->status
+            );
 
-        $ticket->user?->notify(
-            new TicketStatusChangedNotification($ticket, $oldStatus, $ticket->status)
-        );
+            $ticket->loadMissing('user');
+
+            if ($ticket->user_id !== $request->user()->id) {
+                $ticket->user?->notify(
+                    new TicketStatusChangedNotification($ticket, $oldStatus, $ticket->status)
+                );
+            }
         }
 
         // Cargamos relaciones para devolver una respuesta completa
@@ -292,7 +283,8 @@ class TicketController extends Controller
         // Guardamos el nuevo agente asignado
         $newAssignedToId = $ticket->assigned_to_id;
 
-        // Si hubo cambio real de asignación, registramos actividad
+        // Si hubo cambio real de asignación, registramos actividad y notificamos al nuevo agente.
+        // No enviamos una notificación duplicada si se vuelve a asignar al mismo agente.
         if ($oldAssignedToId !== $newAssignedToId) {
             $ticket->recordActivity(
                 type: $newAssignedToId ? 'ticket_assigned' : 'ticket_unassigned',
@@ -303,14 +295,13 @@ class TicketController extends Controller
                 oldValue: $oldAssignedToId ? (string) $oldAssignedToId : null,
                 newValue: $newAssignedToId ? (string) $newAssignedToId : null
             );
+
+            if ($newAssignedToId && $newAssignedToId !== $request->user()->id) {
+                $assignedUser = User::find($newAssignedToId);
+
+                $assignedUser?->notify(new TicketAssignedNotification($ticket));
+            }
         }
-
-        // Enviar notificación si el ticket fue asignado
-        if ($newAssignedToId) {
-        $assignedUser = User::find($newAssignedToId);
-
-        $assignedUser?->notify(new TicketAssignedNotification($ticket));
-    }
         // Cargamos relaciones para devolver una respuesta completa
         $ticket->load(['user', 'assignedTo', 'category']);
 

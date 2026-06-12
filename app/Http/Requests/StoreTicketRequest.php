@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreTicketRequest extends FormRequest
 {
@@ -26,7 +27,11 @@ class StoreTicketRequest extends FormRequest
             'title' => 'required|string|max:255',
             'description' => 'required|string',
             'priority' => 'required|in:low,medium,high',
-            'category_id' => 'nullable|integer|exists:ticket_categories,id',
-    ];
+            'category_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('ticket_categories', 'id')->where('is_active', true),
+            ],
+        ];
     }
 }

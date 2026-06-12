@@ -2,8 +2,8 @@
 
 namespace Tests\Feature;
 
-use App\Models\User;
 use App\Models\Ticket;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -37,485 +37,488 @@ class TicketTest extends TestCase
             'user_id' => $user->id,
         ]);
     }
+
     public function test_guest_cannot_create_ticket(): void
     {
-    $response = $this->postJson('/api/tickets', [
-        'title' => 'Ticket sin login',
-        'description' => 'Este ticket no debería crearse.',
-        'priority' => 'high',
-    ]);
+        $response = $this->postJson('/api/tickets', [
+            'title' => 'Ticket sin login',
+            'description' => 'Este ticket no debería crearse.',
+            'priority' => 'high',
+        ]);
 
-    $response->assertStatus(401);
+        $response->assertStatus(401);
 
-    $this->assertDatabaseMissing('tickets', [
-        'title' => 'Ticket sin login',
-    ]);
+        $this->assertDatabaseMissing('tickets', [
+            'title' => 'Ticket sin login',
+        ]);
     }
 
     public function test_authenticated_user_can_list_only_own_tickets(): void
     {
-    $user = User::factory()->create();
-    $otherUser = User::factory()->create();
+        $user = User::factory()->create();
+        $otherUser = User::factory()->create();
 
-    Ticket::factory()->create([
-        'title' => 'Mi ticket',
-        'user_id' => $user->id,
-    ]);
+        Ticket::factory()->create([
+            'title' => 'Mi ticket',
+            'user_id' => $user->id,
+        ]);
 
-    Ticket::factory()->create([
-        'title' => 'Ticket ajeno',
-        'user_id' => $otherUser->id,
-    ]);
+        Ticket::factory()->create([
+            'title' => 'Ticket ajeno',
+            'user_id' => $otherUser->id,
+        ]);
 
-    Sanctum::actingAs($user);
+        Sanctum::actingAs($user);
 
-    $response = $this->getJson('/api/tickets');
+        $response = $this->getJson('/api/tickets');
 
-    $response->assertStatus(200);
+        $response->assertStatus(200);
 
-    $response->assertJsonPath('pagination.total', 1);
+        $response->assertJsonPath('pagination.total', 1);
 
-    $response->assertJsonPath('tickets.0.title', 'Mi ticket');
+        $response->assertJsonPath('tickets.0.title', 'Mi ticket');
 
-    $response->assertJsonMissing([
-        'title' => 'Ticket ajeno',
-    ]);
+        $response->assertJsonMissing([
+            'title' => 'Ticket ajeno',
+        ]);
     }
 
     public function test_authenticated_user_can_show_own_ticket(): void
     {
-    $user = User::factory()->create();
+        $user = User::factory()->create();
 
-    $ticket = Ticket::factory()->create([
-        'user_id' => $user->id,
-        'title' => 'Ticket visible',
-    ]);
+        $ticket = Ticket::factory()->create([
+            'user_id' => $user->id,
+            'title' => 'Ticket visible',
+        ]);
 
-    Sanctum::actingAs($user);
+        Sanctum::actingAs($user);
 
-    $response = $this->getJson("/api/tickets/{$ticket->id}");
+        $response = $this->getJson("/api/tickets/{$ticket->id}");
 
-    $response->assertStatus(200);
+        $response->assertStatus(200);
 
-    $response->assertJsonPath('ticket.id', $ticket->id);
-    $response->assertJsonPath('ticket.title', 'Ticket visible');
-    $response->assertJsonPath('ticket.created_by.id', $user->id);
+        $response->assertJsonPath('ticket.id', $ticket->id);
+        $response->assertJsonPath('ticket.title', 'Ticket visible');
+        $response->assertJsonPath('ticket.created_by.id', $user->id);
     }
 
     public function test_authenticated_user_cannot_show_other_user_ticket(): void
     {
-    $user = User::factory()->create();
-    $otherUser = User::factory()->create();
+        $user = User::factory()->create();
+        $otherUser = User::factory()->create();
 
-    $ticket = Ticket::factory()->create([
-        'user_id' => $otherUser->id,
-        'title' => 'Ticket ajeno',
-    ]);
+        $ticket = Ticket::factory()->create([
+            'user_id' => $otherUser->id,
+            'title' => 'Ticket ajeno',
+        ]);
 
-    Sanctum::actingAs($user);
+        Sanctum::actingAs($user);
 
-    $response = $this->getJson("/api/tickets/{$ticket->id}");
+        $response = $this->getJson("/api/tickets/{$ticket->id}");
 
-    $response->assertStatus(403);
+        $response->assertStatus(403);
 
-    $response->assertJson([
-        'message' => 'Unauthorized',
-    ]);
+        $response->assertJson([
+            'message' => 'Unauthorized',
+        ]);
     }
 
     public function test_authenticated_user_can_update_own_ticket(): void
     {
-    $user = User::factory()->create();
+        $user = User::factory()->create();
 
-    $ticket = Ticket::factory()->create([
-        'user_id' => $user->id,
-        'title' => 'Título anterior',
-        'description' => 'Descripción anterior',
-        'priority' => 'low',
-        'status' => 'open',
-    ]);
+        $ticket = Ticket::factory()->create([
+            'user_id' => $user->id,
+            'title' => 'Título anterior',
+            'description' => 'Descripción anterior',
+            'priority' => 'low',
+            'status' => 'open',
+        ]);
 
-    Sanctum::actingAs($user);
+        Sanctum::actingAs($user);
 
-    $response = $this->putJson("/api/tickets/{$ticket->id}", [
-        'title' => 'Título actualizado',
-        'description' => 'Descripción actualizada',
-        'priority' => 'medium',
-        'status' => 'in_progress',
-    ]);
+        $response = $this->putJson("/api/tickets/{$ticket->id}", [
+            'title' => 'Título actualizado',
+            'description' => 'Descripción actualizada',
+            'priority' => 'medium',
+            'status' => 'in_progress',
+        ]);
 
-    $response->assertStatus(200);
+        $response->assertStatus(200);
 
-    $response->assertJsonPath('message', 'Ticket updated successfully');
-    $response->assertJsonPath('ticket.title', 'Título actualizado');
-    $response->assertJsonPath('ticket.description', 'Descripción actualizada');
-    $response->assertJsonPath('ticket.priority', 'medium');
-    $response->assertJsonPath('ticket.status', 'in_progress');
+        $response->assertJsonPath('message', 'Ticket updated successfully');
+        $response->assertJsonPath('ticket.title', 'Título actualizado');
+        $response->assertJsonPath('ticket.description', 'Descripción actualizada');
+        $response->assertJsonPath('ticket.priority', 'medium');
+        $response->assertJsonPath('ticket.status', 'in_progress');
 
-    $this->assertDatabaseHas('tickets', [
-        'id' => $ticket->id,
-        'title' => 'Título actualizado',
-        'description' => 'Descripción actualizada',
-        'priority' => 'medium',
-        'status' => 'in_progress',
-    ]);
+        $this->assertDatabaseHas('tickets', [
+            'id' => $ticket->id,
+            'title' => 'Título actualizado',
+            'description' => 'Descripción actualizada',
+            'priority' => 'medium',
+            'status' => 'in_progress',
+        ]);
     }
 
     public function test_authenticated_user_cannot_update_other_user_ticket(): void
     {
-    $user = User::factory()->create();
-    $otherUser = User::factory()->create();
+        $user = User::factory()->create();
+        $otherUser = User::factory()->create();
 
-    $ticket = Ticket::factory()->create([
-        'user_id' => $otherUser->id,
-        'title' => 'Ticket ajeno',
-        'description' => 'Descripción original',
-        'priority' => 'low',
-        'status' => 'open',
-    ]);
+        $ticket = Ticket::factory()->create([
+            'user_id' => $otherUser->id,
+            'title' => 'Ticket ajeno',
+            'description' => 'Descripción original',
+            'priority' => 'low',
+            'status' => 'open',
+        ]);
 
-    Sanctum::actingAs($user);
+        Sanctum::actingAs($user);
 
-    $response = $this->putJson("/api/tickets/{$ticket->id}", [
-        'title' => 'Intento de modificación',
-        'description' => 'Intento de cambiar un ticket ajeno',
-        'priority' => 'high',
-        'status' => 'resolved',
-    ]);
+        $response = $this->putJson("/api/tickets/{$ticket->id}", [
+            'title' => 'Intento de modificación',
+            'description' => 'Intento de cambiar un ticket ajeno',
+            'priority' => 'high',
+            'status' => 'resolved',
+        ]);
 
-    $response->assertStatus(403);
+        $response->assertStatus(403);
 
-    $response->assertJson([
-        'message' => 'Unauthorized',
-    ]);
+        $response->assertJson([
+            'message' => 'Unauthorized',
+        ]);
 
-    $this->assertDatabaseHas('tickets', [
-        'id' => $ticket->id,
-        'title' => 'Ticket ajeno',
-        'description' => 'Descripción original',
-        'priority' => 'low',
-        'status' => 'open',
-    ]);
+        $this->assertDatabaseHas('tickets', [
+            'id' => $ticket->id,
+            'title' => 'Ticket ajeno',
+            'description' => 'Descripción original',
+            'priority' => 'low',
+            'status' => 'open',
+        ]);
     }
+
     public function test_authenticated_user_can_update_ticket_status(): void
     {
-    $user = User::factory()->create();
+        $user = User::factory()->create();
 
-    $ticket = Ticket::factory()->create([
-        'user_id' => $user->id,
-        'status' => 'open',
-    ]);
+        $ticket = Ticket::factory()->create([
+            'user_id' => $user->id,
+            'status' => 'open',
+        ]);
 
-    Sanctum::actingAs($user);
+        Sanctum::actingAs($user);
 
-    $response = $this->patchJson("/api/tickets/{$ticket->id}/status", [
-        'status' => 'resolved',
-    ]);
+        $response = $this->patchJson("/api/tickets/{$ticket->id}/status", [
+            'status' => 'resolved',
+        ]);
 
-    $response->assertStatus(200);
+        $response->assertStatus(200);
 
-    $response->assertJsonPath('message', 'Ticket status updated successfully');
-    $response->assertJsonPath('ticket.status', 'resolved');
+        $response->assertJsonPath('message', 'Ticket status updated successfully');
+        $response->assertJsonPath('ticket.status', 'resolved');
 
-    $this->assertDatabaseHas('tickets', [
-        'id' => $ticket->id,
-        'status' => 'resolved',
-    ]);
+        $this->assertDatabaseHas('tickets', [
+            'id' => $ticket->id,
+            'status' => 'resolved',
+        ]);
     }
 
     public function test_authenticated_user_cannot_update_ticket_status_with_invalid_value(): void
     {
-    $user = User::factory()->create();
+        $user = User::factory()->create();
 
-    $ticket = Ticket::factory()->create([
-        'user_id' => $user->id,
-        'status' => 'open',
-    ]);
+        $ticket = Ticket::factory()->create([
+            'user_id' => $user->id,
+            'status' => 'open',
+        ]);
 
-    Sanctum::actingAs($user);
+        Sanctum::actingAs($user);
 
-    $response = $this->patchJson("/api/tickets/{$ticket->id}/status", [
-        'status' => 'invalid_status',
-    ]);
+        $response = $this->patchJson("/api/tickets/{$ticket->id}/status", [
+            'status' => 'invalid_status',
+        ]);
 
-    $response->assertStatus(422);
+        $response->assertStatus(422);
 
-    $response->assertJsonValidationErrors(['status']);
+        $response->assertJsonValidationErrors(['status']);
 
-    $this->assertDatabaseHas('tickets', [
-        'id' => $ticket->id,
-        'status' => 'open',
-    ]);
+        $this->assertDatabaseHas('tickets', [
+            'id' => $ticket->id,
+            'status' => 'open',
+        ]);
     }
 
     public function test_authenticated_user_can_delete_own_ticket(): void
     {
-    $user = User::factory()->create();
+        $user = User::factory()->create();
 
-    $ticket = Ticket::factory()->create([
-        'user_id' => $user->id,
-    ]);
+        $ticket = Ticket::factory()->create([
+            'user_id' => $user->id,
+        ]);
 
-    Sanctum::actingAs($user);
+        Sanctum::actingAs($user);
 
-    $response = $this->deleteJson("/api/tickets/{$ticket->id}");
+        $response = $this->deleteJson("/api/tickets/{$ticket->id}");
 
-    $response->assertStatus(200);
+        $response->assertStatus(200);
 
-    $response->assertJson([
-        'message' => 'Ticket deleted successfully',
-    ]);
+        $response->assertJson([
+            'message' => 'Ticket deleted successfully',
+        ]);
 
-    $this->assertDatabaseMissing('tickets', [
-        'id' => $ticket->id,
-    ]);
+        $this->assertDatabaseMissing('tickets', [
+            'id' => $ticket->id,
+        ]);
     }
 
     public function test_authenticated_user_cannot_delete_other_user_ticket(): void
     {
-    $user = User::factory()->create();
-    $otherUser = User::factory()->create();
+        $user = User::factory()->create();
+        $otherUser = User::factory()->create();
 
-    $ticket = Ticket::factory()->create([
-        'user_id' => $otherUser->id,
-    ]);
+        $ticket = Ticket::factory()->create([
+            'user_id' => $otherUser->id,
+        ]);
 
-    Sanctum::actingAs($user);
+        Sanctum::actingAs($user);
 
-    $response = $this->deleteJson("/api/tickets/{$ticket->id}");
+        $response = $this->deleteJson("/api/tickets/{$ticket->id}");
 
-    $response->assertStatus(403);
+        $response->assertStatus(403);
 
-    $response->assertJson([
-        'message' => 'Unauthorized',
-    ]);
+        $response->assertJson([
+            'message' => 'Unauthorized',
+        ]);
 
-    $this->assertDatabaseHas('tickets', [
-        'id' => $ticket->id,
-    ]);
+        $this->assertDatabaseHas('tickets', [
+            'id' => $ticket->id,
+        ]);
     }
 
     public function test_authenticated_user_can_filter_tickets_by_status(): void
     {
-    $user = User::factory()->create();
+        $user = User::factory()->create();
 
-    Ticket::factory()->create([
-        'user_id' => $user->id,
-        'title' => 'Ticket abierto',
-        'status' => 'open',
-    ]);
+        Ticket::factory()->create([
+            'user_id' => $user->id,
+            'title' => 'Ticket abierto',
+            'status' => 'open',
+        ]);
 
-    Ticket::factory()->create([
-        'user_id' => $user->id,
-        'title' => 'Ticket resuelto',
-        'status' => 'resolved',
-    ]);
+        Ticket::factory()->create([
+            'user_id' => $user->id,
+            'title' => 'Ticket resuelto',
+            'status' => 'resolved',
+        ]);
 
-    Sanctum::actingAs($user);
+        Sanctum::actingAs($user);
 
-    $response = $this->getJson('/api/tickets?status=resolved');
+        $response = $this->getJson('/api/tickets?status=resolved');
 
-    $response->assertStatus(200);
+        $response->assertStatus(200);
 
-    $response->assertJsonPath('pagination.total', 1);
-    $response->assertJsonPath('tickets.0.title', 'Ticket resuelto');
-    $response->assertJsonPath('tickets.0.status', 'resolved');
+        $response->assertJsonPath('pagination.total', 1);
+        $response->assertJsonPath('tickets.0.title', 'Ticket resuelto');
+        $response->assertJsonPath('tickets.0.status', 'resolved');
 
-    $response->assertJsonMissing([
-        'title' => 'Ticket abierto',
-    ]);
+        $response->assertJsonMissing([
+            'title' => 'Ticket abierto',
+        ]);
     }
 
     public function test_authenticated_user_can_filter_tickets_by_priority(): void
     {
-    $user = User::factory()->create();
+        $user = User::factory()->create();
 
-    Ticket::factory()->create([
-        'user_id' => $user->id,
-        'title' => 'Ticket baja prioridad',
-        'priority' => 'low',
-    ]);
+        Ticket::factory()->create([
+            'user_id' => $user->id,
+            'title' => 'Ticket baja prioridad',
+            'priority' => 'low',
+        ]);
 
-    Ticket::factory()->create([
-        'user_id' => $user->id,
-        'title' => 'Ticket alta prioridad',
-        'priority' => 'high',
-    ]);
+        Ticket::factory()->create([
+            'user_id' => $user->id,
+            'title' => 'Ticket alta prioridad',
+            'priority' => 'high',
+        ]);
 
-    Sanctum::actingAs($user);
+        Sanctum::actingAs($user);
 
-    $response = $this->getJson('/api/tickets?priority=high');
+        $response = $this->getJson('/api/tickets?priority=high');
 
-    $response->assertStatus(200);
+        $response->assertStatus(200);
 
-    $response->assertJsonPath('pagination.total', 1);
-    $response->assertJsonPath('tickets.0.title', 'Ticket alta prioridad');
-    $response->assertJsonPath('tickets.0.priority', 'high');
+        $response->assertJsonPath('pagination.total', 1);
+        $response->assertJsonPath('tickets.0.title', 'Ticket alta prioridad');
+        $response->assertJsonPath('tickets.0.priority', 'high');
 
-    $response->assertJsonMissing([
-        'title' => 'Ticket baja prioridad',
-    ]);
+        $response->assertJsonMissing([
+            'title' => 'Ticket baja prioridad',
+        ]);
     }
 
     public function test_authenticated_user_can_search_tickets_by_title_or_description(): void
     {
-    $user = User::factory()->create();
+        $user = User::factory()->create();
 
-    Ticket::factory()->create([
-        'user_id' => $user->id,
-        'title' => 'Error al iniciar sesión',
-        'description' => 'No puedo entrar con mi contraseña.',
-    ]);
+        Ticket::factory()->create([
+            'user_id' => $user->id,
+            'title' => 'Error al iniciar sesión',
+            'description' => 'No puedo entrar con mi contraseña.',
+        ]);
 
-    Ticket::factory()->create([
-        'user_id' => $user->id,
-        'title' => 'Problema con impresora',
-        'description' => 'La impresora no responde.',
-    ]);
+        Ticket::factory()->create([
+            'user_id' => $user->id,
+            'title' => 'Problema con impresora',
+            'description' => 'La impresora no responde.',
+        ]);
 
-    Sanctum::actingAs($user);
+        Sanctum::actingAs($user);
 
-    $response = $this->getJson('/api/tickets?search=contraseña');
+        $response = $this->getJson('/api/tickets?search=contraseña');
 
-    $response->assertStatus(200);
+        $response->assertStatus(200);
 
-    $response->assertJsonPath('pagination.total', 1);
-    $response->assertJsonPath('tickets.0.title', 'Error al iniciar sesión');
+        $response->assertJsonPath('pagination.total', 1);
+        $response->assertJsonPath('tickets.0.title', 'Error al iniciar sesión');
 
-    $response->assertJsonMissing([
-        'title' => 'Problema con impresora',
-    ]);
+        $response->assertJsonMissing([
+            'title' => 'Problema con impresora',
+        ]);
     }
+
     public function test_authenticated_user_can_sort_tickets_by_title(): void
     {
-    $user = User::factory()->create();
+        $user = User::factory()->create();
 
-    Ticket::factory()->create([
-        'user_id' => $user->id,
-        'title' => 'Zebra ticket',
-    ]);
+        Ticket::factory()->create([
+            'user_id' => $user->id,
+            'title' => 'Zebra ticket',
+        ]);
 
-    Ticket::factory()->create([
-        'user_id' => $user->id,
-        'title' => 'Alpha ticket',
-    ]);
+        Ticket::factory()->create([
+            'user_id' => $user->id,
+            'title' => 'Alpha ticket',
+        ]);
 
-    Sanctum::actingAs($user);
+        Sanctum::actingAs($user);
 
-    $response = $this->getJson('/api/tickets?sort_by=title&sort_direction=asc');
+        $response = $this->getJson('/api/tickets?sort_by=title&sort_direction=asc');
 
-    $response->assertStatus(200);
+        $response->assertStatus(200);
 
-    $response->assertJsonPath('pagination.total', 2);
-    $response->assertJsonPath('tickets.0.title', 'Alpha ticket');
-    $response->assertJsonPath('tickets.1.title', 'Zebra ticket');
+        $response->assertJsonPath('pagination.total', 2);
+        $response->assertJsonPath('tickets.0.title', 'Alpha ticket');
+        $response->assertJsonPath('tickets.1.title', 'Zebra ticket');
     }
 
     public function test_authenticated_user_gets_default_sort_when_sort_by_is_invalid(): void
     {
-    $user = User::factory()->create();
+        $user = User::factory()->create();
 
-    $oldTicket = Ticket::factory()->create([
-        'user_id' => $user->id,
-        'title' => 'Ticket antiguo',
-        'created_at' => now()->subDay(),
-    ]);
+        $oldTicket = Ticket::factory()->create([
+            'user_id' => $user->id,
+            'title' => 'Ticket antiguo',
+            'created_at' => now()->subDay(),
+        ]);
 
-    $newTicket = Ticket::factory()->create([
-        'user_id' => $user->id,
-        'title' => 'Ticket nuevo',
-        'created_at' => now(),
-    ]);
+        $newTicket = Ticket::factory()->create([
+            'user_id' => $user->id,
+            'title' => 'Ticket nuevo',
+            'created_at' => now(),
+        ]);
 
-    Sanctum::actingAs($user);
+        Sanctum::actingAs($user);
 
-    $response = $this->getJson('/api/tickets?sort_by=invalid_column&sort_direction=asc');
+        $response = $this->getJson('/api/tickets?sort_by=invalid_column&sort_direction=asc');
 
-    $response->assertStatus(200);
+        $response->assertStatus(200);
 
-    $response->assertJsonPath('pagination.total', 2);
-    $response->assertJsonPath('tickets.0.id', $newTicket->id);
-    $response->assertJsonPath('tickets.1.id', $oldTicket->id);
+        $response->assertJsonPath('pagination.total', 2);
+        $response->assertJsonPath('tickets.0.id', $newTicket->id);
+        $response->assertJsonPath('tickets.1.id', $oldTicket->id);
     }
 
     public function test_authenticated_user_gets_default_sort_direction_when_sort_direction_is_invalid(): void
     {
-    $user = User::factory()->create();
+        $user = User::factory()->create();
 
-    $oldTicket = Ticket::factory()->create([
-        'user_id' => $user->id,
-        'title' => 'Ticket antiguo',
-        'created_at' => now()->subDay(),
-    ]);
+        $oldTicket = Ticket::factory()->create([
+            'user_id' => $user->id,
+            'title' => 'Ticket antiguo',
+            'created_at' => now()->subDay(),
+        ]);
 
-    $newTicket = Ticket::factory()->create([
-        'user_id' => $user->id,
-        'title' => 'Ticket nuevo',
-        'created_at' => now(),
-    ]);
+        $newTicket = Ticket::factory()->create([
+            'user_id' => $user->id,
+            'title' => 'Ticket nuevo',
+            'created_at' => now(),
+        ]);
 
-    Sanctum::actingAs($user);
+        Sanctum::actingAs($user);
 
-    $response = $this->getJson('/api/tickets?sort_by=created_at&sort_direction=invalid_direction');
+        $response = $this->getJson('/api/tickets?sort_by=created_at&sort_direction=invalid_direction');
 
-    $response->assertStatus(200);
+        $response->assertStatus(200);
 
-    $response->assertJsonPath('pagination.total', 2);
-    $response->assertJsonPath('tickets.0.id', $newTicket->id);
-    $response->assertJsonPath('tickets.1.id', $oldTicket->id);
+        $response->assertJsonPath('pagination.total', 2);
+        $response->assertJsonPath('tickets.0.id', $newTicket->id);
+        $response->assertJsonPath('tickets.1.id', $oldTicket->id);
     }
 
     public function test_authenticated_user_cannot_filter_tickets_by_invalid_status(): void
     {
-    $user = User::factory()->create();
+        $user = User::factory()->create();
 
-    Sanctum::actingAs($user);
+        Sanctum::actingAs($user);
 
-    $response = $this->getJson('/api/tickets?status=invalid_status');
+        $response = $this->getJson('/api/tickets?status=invalid_status');
 
-    $response->assertStatus(422);
+        $response->assertStatus(422);
 
-    $response->assertJsonValidationErrors(['status']);
+        $response->assertJsonValidationErrors(['status']);
     }
 
     public function test_authenticated_user_cannot_filter_tickets_by_invalid_priority(): void
     {
-    $user = User::factory()->create();
+        $user = User::factory()->create();
 
-    Sanctum::actingAs($user);
+        Sanctum::actingAs($user);
 
-    $response = $this->getJson('/api/tickets?priority=urgent');
+        $response = $this->getJson('/api/tickets?priority=urgent');
 
-    $response->assertStatus(422);
+        $response->assertStatus(422);
 
-    $response->assertJsonValidationErrors(['priority']);
+        $response->assertJsonValidationErrors(['priority']);
     }
 
     public function test_support_agent_can_list_all_tickets(): void
     {
-    /** @var User $agent */
-    $agent = User::factory()->supportAgent()->create();
+        /** @var User $agent */
+        $agent = User::factory()->supportAgent()->create();
 
-    /** @var User $userOne */
-    $userOne = User::factory()->create();
+        /** @var User $userOne */
+        $userOne = User::factory()->create();
 
-    /** @var User $userTwo */
-    $userTwo = User::factory()->create();
+        /** @var User $userTwo */
+        $userTwo = User::factory()->create();
 
-    Ticket::factory()->create([
-        'user_id' => $userOne->id,
-        'title' => 'Ticket usuario uno',
-    ]);
+        Ticket::factory()->create([
+            'user_id' => $userOne->id,
+            'title' => 'Ticket usuario uno',
+        ]);
 
-    Ticket::factory()->create([
-        'user_id' => $userTwo->id,
-        'title' => 'Ticket usuario dos',
-    ]);
+        Ticket::factory()->create([
+            'user_id' => $userTwo->id,
+            'title' => 'Ticket usuario dos',
+        ]);
 
-    $response = $this->actingAs($agent)->getJson('/api/tickets');
+        $response = $this->actingAs($agent)->getJson('/api/tickets');
 
-    $response->assertOk()
-        ->assertJsonPath('pagination.total', 2);
+        $response->assertOk()
+            ->assertJsonPath('pagination.total', 2);
     }
 
     public function test_support_agent_can_show_any_ticket(): void
@@ -586,274 +589,274 @@ class TicketTest extends TestCase
 
     public function test_support_agent_can_assign_ticket_to_support_agent(): void
     {
-    /** @var User $agent */
-    $agent = User::factory()->supportAgent()->create();
+        /** @var User $agent */
+        $agent = User::factory()->supportAgent()->create();
 
-    /** @var User $assignedAgent */
-    $assignedAgent = User::factory()->supportAgent()->create();
+        /** @var User $assignedAgent */
+        $assignedAgent = User::factory()->supportAgent()->create();
 
-    /** @var User $owner */
-    $owner = User::factory()->create();
+        /** @var User $owner */
+        $owner = User::factory()->create();
 
-    $ticket = Ticket::factory()->create([
-        'user_id' => $owner->id,
-    ]);
+        $ticket = Ticket::factory()->create([
+            'user_id' => $owner->id,
+        ]);
 
-    $response = $this->actingAs($agent)->patchJson("/api/tickets/{$ticket->id}/assign", [
-        'assigned_to_id' => $assignedAgent->id,
-    ]);
+        $response = $this->actingAs($agent)->patchJson("/api/tickets/{$ticket->id}/assign", [
+            'assigned_to_id' => $assignedAgent->id,
+        ]);
 
-    $response->assertOk()
-        ->assertJsonPath('message', 'Ticket assigned successfully')
-        ->assertJsonPath('ticket.assigned_to.id', $assignedAgent->id);
+        $response->assertOk()
+            ->assertJsonPath('message', 'Ticket assigned successfully')
+            ->assertJsonPath('ticket.assigned_to.id', $assignedAgent->id);
 
-    $this->assertDatabaseHas('tickets', [
-        'id' => $ticket->id,
-        'assigned_to_id' => $assignedAgent->id,
-    ]);
+        $this->assertDatabaseHas('tickets', [
+            'id' => $ticket->id,
+            'assigned_to_id' => $assignedAgent->id,
+        ]);
     }
 
     public function test_admin_can_assign_ticket_to_support_agent(): void
     {
-    /** @var User $admin */
-    $admin = User::factory()->admin()->create();
+        /** @var User $admin */
+        $admin = User::factory()->admin()->create();
 
-    /** @var User $assignedAgent */
-    $assignedAgent = User::factory()->supportAgent()->create();
+        /** @var User $assignedAgent */
+        $assignedAgent = User::factory()->supportAgent()->create();
 
-    /** @var User $owner */
-    $owner = User::factory()->create();
+        /** @var User $owner */
+        $owner = User::factory()->create();
 
-    $ticket = Ticket::factory()->create([
-        'user_id' => $owner->id,
-    ]);
+        $ticket = Ticket::factory()->create([
+            'user_id' => $owner->id,
+        ]);
 
-    $response = $this->actingAs($admin)->patchJson("/api/tickets/{$ticket->id}/assign", [
-        'assigned_to_id' => $assignedAgent->id,
-    ]);
+        $response = $this->actingAs($admin)->patchJson("/api/tickets/{$ticket->id}/assign", [
+            'assigned_to_id' => $assignedAgent->id,
+        ]);
 
-    $response->assertOk()
-        ->assertJsonPath('message', 'Ticket assigned successfully');
+        $response->assertOk()
+            ->assertJsonPath('message', 'Ticket assigned successfully');
 
-    $this->assertDatabaseHas('tickets', [
-        'id' => $ticket->id,
-        'assigned_to_id' => $assignedAgent->id,
-    ]);
+        $this->assertDatabaseHas('tickets', [
+            'id' => $ticket->id,
+            'assigned_to_id' => $assignedAgent->id,
+        ]);
     }
 
     public function test_regular_user_cannot_assign_ticket(): void
     {
-    /** @var User $user */
-    $user = User::factory()->create();
+        /** @var User $user */
+        $user = User::factory()->create();
 
-    /** @var User $assignedAgent */
-    $assignedAgent = User::factory()->supportAgent()->create();
+        /** @var User $assignedAgent */
+        $assignedAgent = User::factory()->supportAgent()->create();
 
-    $ticket = Ticket::factory()->create([
-        'user_id' => $user->id,
-    ]);
+        $ticket = Ticket::factory()->create([
+            'user_id' => $user->id,
+        ]);
 
-    $response = $this->actingAs($user)->patchJson("/api/tickets/{$ticket->id}/assign", [
-        'assigned_to_id' => $assignedAgent->id,
-    ]);
+        $response = $this->actingAs($user)->patchJson("/api/tickets/{$ticket->id}/assign", [
+            'assigned_to_id' => $assignedAgent->id,
+        ]);
 
-    $response->assertForbidden();
+        $response->assertForbidden();
 
-    $this->assertDatabaseHas('tickets', [
-        'id' => $ticket->id,
-        'assigned_to_id' => null,
-    ]);
+        $this->assertDatabaseHas('tickets', [
+            'id' => $ticket->id,
+            'assigned_to_id' => null,
+        ]);
     }
 
     public function test_ticket_cannot_be_assigned_to_regular_user(): void
     {
-    /** @var User $agent */
-    $agent = User::factory()->supportAgent()->create();
+        /** @var User $agent */
+        $agent = User::factory()->supportAgent()->create();
 
-    /** @var User $regularUser */
-    $regularUser = User::factory()->create();
+        /** @var User $regularUser */
+        $regularUser = User::factory()->create();
 
-    /** @var User $owner */
-    $owner = User::factory()->create();
+        /** @var User $owner */
+        $owner = User::factory()->create();
 
-    $ticket = Ticket::factory()->create([
-        'user_id' => $owner->id,
-    ]);
+        $ticket = Ticket::factory()->create([
+            'user_id' => $owner->id,
+        ]);
 
-    $response = $this->actingAs($agent)->patchJson("/api/tickets/{$ticket->id}/assign", [
-        'assigned_to_id' => $regularUser->id,
-    ]);
+        $response = $this->actingAs($agent)->patchJson("/api/tickets/{$ticket->id}/assign", [
+            'assigned_to_id' => $regularUser->id,
+        ]);
 
-    $response->assertUnprocessable()
-        ->assertJsonValidationErrors(['assigned_to_id']);
+        $response->assertUnprocessable()
+            ->assertJsonValidationErrors(['assigned_to_id']);
 
-    $this->assertDatabaseHas('tickets', [
-        'id' => $ticket->id,
-        'assigned_to_id' => null,
-    ]);
+        $this->assertDatabaseHas('tickets', [
+            'id' => $ticket->id,
+            'assigned_to_id' => null,
+        ]);
     }
 
     public function test_support_agent_can_unassign_ticket(): void
     {
-    /** @var User $agent */
-    $agent = User::factory()->supportAgent()->create();
+        /** @var User $agent */
+        $agent = User::factory()->supportAgent()->create();
 
-    /** @var User $assignedAgent */
-    $assignedAgent = User::factory()->supportAgent()->create();
+        /** @var User $assignedAgent */
+        $assignedAgent = User::factory()->supportAgent()->create();
 
-    /** @var User $owner */
-    $owner = User::factory()->create();
+        /** @var User $owner */
+        $owner = User::factory()->create();
 
-    $ticket = Ticket::factory()->create([
-        'user_id' => $owner->id,
-        'assigned_to_id' => $assignedAgent->id,
-    ]);
+        $ticket = Ticket::factory()->create([
+            'user_id' => $owner->id,
+            'assigned_to_id' => $assignedAgent->id,
+        ]);
 
-    $response = $this->actingAs($agent)->patchJson("/api/tickets/{$ticket->id}/assign", [
-        'assigned_to_id' => null,
-    ]);
+        $response = $this->actingAs($agent)->patchJson("/api/tickets/{$ticket->id}/assign", [
+            'assigned_to_id' => null,
+        ]);
 
-    $response->assertOk()
-        ->assertJsonPath('message', 'Ticket unassigned successfully')
-        ->assertJsonPath('ticket.assigned_to', null);
+        $response->assertOk()
+            ->assertJsonPath('message', 'Ticket unassigned successfully')
+            ->assertJsonPath('ticket.assigned_to', null);
 
-    $this->assertDatabaseHas('tickets', [
-        'id' => $ticket->id,
-        'assigned_to_id' => null,
-    ]);
+        $this->assertDatabaseHas('tickets', [
+            'id' => $ticket->id,
+            'assigned_to_id' => null,
+        ]);
     }
 
     public function test_support_agent_can_filter_tickets_assigned_to_me(): void
     {
-    /** @var User $agent */
-    $agent = User::factory()->supportAgent()->create();
+        /** @var User $agent */
+        $agent = User::factory()->supportAgent()->create();
 
-    /** @var User $otherAgent */
-    $otherAgent = User::factory()->supportAgent()->create();
+        /** @var User $otherAgent */
+        $otherAgent = User::factory()->supportAgent()->create();
 
-    /** @var User $owner */
-    $owner = User::factory()->create();
+        /** @var User $owner */
+        $owner = User::factory()->create();
 
-    Ticket::factory()->create([
-        'user_id' => $owner->id,
-        'assigned_to_id' => $agent->id,
-        'title' => 'Ticket asignado a mí',
-    ]);
+        Ticket::factory()->create([
+            'user_id' => $owner->id,
+            'assigned_to_id' => $agent->id,
+            'title' => 'Ticket asignado a mí',
+        ]);
 
-    Ticket::factory()->create([
-        'user_id' => $owner->id,
-        'assigned_to_id' => $otherAgent->id,
-        'title' => 'Ticket asignado a otro',
-    ]);
+        Ticket::factory()->create([
+            'user_id' => $owner->id,
+            'assigned_to_id' => $otherAgent->id,
+            'title' => 'Ticket asignado a otro',
+        ]);
 
-    $response = $this->actingAs($agent)->getJson('/api/tickets?assigned=me');
+        $response = $this->actingAs($agent)->getJson('/api/tickets?assigned=me');
 
-    $response->assertOk()
-        ->assertJsonPath('pagination.total', 1)
-        ->assertJsonPath('tickets.0.title', 'Ticket asignado a mí');
+        $response->assertOk()
+            ->assertJsonPath('pagination.total', 1)
+            ->assertJsonPath('tickets.0.title', 'Ticket asignado a mí');
     }
 
     public function test_staff_can_filter_unassigned_tickets(): void
     {
-    /** @var User $agent */
-    $agent = User::factory()->supportAgent()->create();
+        /** @var User $agent */
+        $agent = User::factory()->supportAgent()->create();
 
-    /** @var User $assignedAgent */
-    $assignedAgent = User::factory()->supportAgent()->create();
+        /** @var User $assignedAgent */
+        $assignedAgent = User::factory()->supportAgent()->create();
 
-    /** @var User $owner */
-    $owner = User::factory()->create();
+        /** @var User $owner */
+        $owner = User::factory()->create();
 
-    Ticket::factory()->create([
-        'user_id' => $owner->id,
-        'assigned_to_id' => null,
-        'title' => 'Ticket sin asignar',
-    ]);
+        Ticket::factory()->create([
+            'user_id' => $owner->id,
+            'assigned_to_id' => null,
+            'title' => 'Ticket sin asignar',
+        ]);
 
-    Ticket::factory()->create([
-        'user_id' => $owner->id,
-        'assigned_to_id' => $assignedAgent->id,
-        'title' => 'Ticket asignado',
-    ]);
+        Ticket::factory()->create([
+            'user_id' => $owner->id,
+            'assigned_to_id' => $assignedAgent->id,
+            'title' => 'Ticket asignado',
+        ]);
 
-    $response = $this->actingAs($agent)->getJson('/api/tickets?assigned=unassigned');
+        $response = $this->actingAs($agent)->getJson('/api/tickets?assigned=unassigned');
 
-    $response->assertOk()
-        ->assertJsonPath('pagination.total', 1)
-        ->assertJsonPath('tickets.0.title', 'Ticket sin asignar');
+        $response->assertOk()
+            ->assertJsonPath('pagination.total', 1)
+            ->assertJsonPath('tickets.0.title', 'Ticket sin asignar');
     }
 
     public function test_admin_can_filter_tickets_by_assigned_agent_id(): void
     {
-    /** @var User $admin */
-    $admin = User::factory()->admin()->create();
+        /** @var User $admin */
+        $admin = User::factory()->admin()->create();
 
-    /** @var User $agent */
-    $agent = User::factory()->supportAgent()->create();
+        /** @var User $agent */
+        $agent = User::factory()->supportAgent()->create();
 
-    /** @var User $otherAgent */
-    $otherAgent = User::factory()->supportAgent()->create();
+        /** @var User $otherAgent */
+        $otherAgent = User::factory()->supportAgent()->create();
 
-    /** @var User $owner */
-    $owner = User::factory()->create();
+        /** @var User $owner */
+        $owner = User::factory()->create();
 
-    Ticket::factory()->create([
-        'user_id' => $owner->id,
-        'assigned_to_id' => $agent->id,
-        'title' => 'Ticket del agente filtrado',
-    ]);
+        Ticket::factory()->create([
+            'user_id' => $owner->id,
+            'assigned_to_id' => $agent->id,
+            'title' => 'Ticket del agente filtrado',
+        ]);
 
-    Ticket::factory()->create([
-        'user_id' => $owner->id,
-        'assigned_to_id' => $otherAgent->id,
-        'title' => 'Ticket de otro agente',
-    ]);
+        Ticket::factory()->create([
+            'user_id' => $owner->id,
+            'assigned_to_id' => $otherAgent->id,
+            'title' => 'Ticket de otro agente',
+        ]);
 
-    $response = $this->actingAs($admin)->getJson("/api/tickets?assigned_to_id={$agent->id}");
+        $response = $this->actingAs($admin)->getJson("/api/tickets?assigned_to_id={$agent->id}");
 
-    $response->assertOk()
-        ->assertJsonPath('pagination.total', 1)
-        ->assertJsonPath('tickets.0.title', 'Ticket del agente filtrado');
+        $response->assertOk()
+            ->assertJsonPath('pagination.total', 1)
+            ->assertJsonPath('tickets.0.title', 'Ticket del agente filtrado');
     }
 
     public function test_user_cannot_see_other_users_tickets_even_when_filtering_by_assignment(): void
     {
-    /** @var User $user */
-    $user = User::factory()->create();
+        /** @var User $user */
+        $user = User::factory()->create();
 
-    /** @var User $otherUser */
-    $otherUser = User::factory()->create();
+        /** @var User $otherUser */
+        $otherUser = User::factory()->create();
 
-    /** @var User $agent */
-    $agent = User::factory()->supportAgent()->create();
+        /** @var User $agent */
+        $agent = User::factory()->supportAgent()->create();
 
-    Ticket::factory()->create([
-        'user_id' => $user->id,
-        'assigned_to_id' => $agent->id,
-        'title' => 'Mi ticket asignado',
-    ]);
+        Ticket::factory()->create([
+            'user_id' => $user->id,
+            'assigned_to_id' => $agent->id,
+            'title' => 'Mi ticket asignado',
+        ]);
 
-    Ticket::factory()->create([
-        'user_id' => $otherUser->id,
-        'assigned_to_id' => $agent->id,
-        'title' => 'Ticket ajeno asignado',
-    ]);
+        Ticket::factory()->create([
+            'user_id' => $otherUser->id,
+            'assigned_to_id' => $agent->id,
+            'title' => 'Ticket ajeno asignado',
+        ]);
 
-    $response = $this->actingAs($user)->getJson("/api/tickets?assigned_to_id={$agent->id}");
+        $response = $this->actingAs($user)->getJson("/api/tickets?assigned_to_id={$agent->id}");
 
-    $response->assertOk()
-        ->assertJsonPath('pagination.total', 1)
-        ->assertJsonPath('tickets.0.title', 'Mi ticket asignado');
+        $response->assertOk()
+            ->assertJsonPath('pagination.total', 1)
+            ->assertJsonPath('tickets.0.title', 'Mi ticket asignado');
     }
 
     public function test_cannot_filter_tickets_by_invalid_assigned_value(): void
     {
-    /** @var User $agent */
-    $agent = User::factory()->supportAgent()->create();
+        /** @var User $agent */
+        $agent = User::factory()->supportAgent()->create();
 
-    $response = $this->actingAs($agent)->getJson('/api/tickets?assigned=random');
+        $response = $this->actingAs($agent)->getJson('/api/tickets?assigned=random');
 
-    $response->assertUnprocessable()
-        ->assertJsonValidationErrors(['assigned']);
+        $response->assertUnprocessable()
+            ->assertJsonValidationErrors(['assigned']);
     }
 }

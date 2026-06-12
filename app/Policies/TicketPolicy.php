@@ -4,7 +4,6 @@ namespace App\Policies;
 
 use App\Models\Ticket;
 use App\Models\User;
-use Illuminate\Auth\Access\Response;
 
 class TicketPolicy
 {
@@ -21,7 +20,7 @@ class TicketPolicy
      */
     public function view(User $user, Ticket $ticket): bool
     {
-    return $user->isStaff() || $user->id === $ticket->user_id;
+        return $user->isStaff() || $user->id === $ticket->user_id;
     }
 
     /**
@@ -37,15 +36,15 @@ class TicketPolicy
      */
     public function update(User $user, Ticket $ticket): bool
     {
-    return $user->isStaff() || $user->id === $ticket->user_id;
+        return $user->isStaff() || $user->id === $ticket->user_id;
     }
 
     /**
      * Determine whether the user can delete the model.
      */
-   public function delete(User $user, Ticket $ticket): bool
+    public function delete(User $user, Ticket $ticket): bool
     {
-    return $user->isAdmin() || $user->id === $ticket->user_id;
+        return $user->isAdmin() || $user->id === $ticket->user_id;
     }
 
     public function assign(User $user, Ticket $ticket): bool

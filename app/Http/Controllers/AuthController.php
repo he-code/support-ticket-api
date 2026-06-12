@@ -14,13 +14,13 @@ class AuthController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users',
-            'password' => 'required|min:6'
+            'password' => 'required|min:6',
         ]);
 
         $user = User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
-            'password' => bcrypt($validated['password'])
+            'password' => bcrypt($validated['password']),
         ]);
 
         $token = $user->createToken('auth_token')->plainTextToken;
@@ -28,7 +28,7 @@ class AuthController extends Controller
         return response()->json([
             'message' => 'User registered successfully',
             'token' => $token,
-            'user' => $user
+            'user' => $user,
         ], 201);
     }
 
@@ -37,15 +37,15 @@ class AuthController extends Controller
     {
         $validated = $request->validate([
             'email' => 'required|email',
-            'password' => 'required'
+            'password' => 'required',
         ]);
 
         $user = User::where('email', $validated['email'])->first();
 
-        if (!$user || !Hash::check($validated['password'], $user->password)) {
+        if (! $user || ! Hash::check($validated['password'], $user->password)) {
 
             return response()->json([
-                'message' => 'Invalid credentials'
+                'message' => 'Invalid credentials',
             ], 401);
         }
 
@@ -54,7 +54,7 @@ class AuthController extends Controller
         return response()->json([
             'message' => 'Login successful',
             'token' => $token,
-            'user' => $user
+            'user' => $user,
         ]);
     }
 
@@ -64,7 +64,7 @@ class AuthController extends Controller
         $request->user()->currentAccessToken()->delete();
 
         return response()->json([
-            'message' => 'Logged out successfully'
+            'message' => 'Logged out successfully',
         ]);
     }
 }
