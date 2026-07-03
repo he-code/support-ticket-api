@@ -355,6 +355,19 @@ php artisan test
 vendor\bin\pint
 ```
 
-## Estado del proyecto
+### Estado del proyecto
 
-Backend en desarrollo activo con suite automatizada para autenticación, tickets, módulos de workflow, importación masiva de usuarios y seguridad básica del login.
+
+## Demo en producción
+
+La API se encuentra desplegada en Railway:
+
+```bat
+https://support-ticket-api-production.up.railway.app
+```
+
+Documentación Swagger:
+
+```bat
+https://support-ticket-api-production.up.railway.app/api/documentation
+```
