@@ -1,37 +1,40 @@
 # Testing
 
-Este documento explica cómo ejecutar las pruebas automatizadas del proyecto.
+Este documento explica como ejecutar las pruebas automatizadas del proyecto.
 
-El backend utiliza PHPUnit junto con las herramientas de testing incluidas en Laravel.
-
----
+El backend utiliza PHPUnit junto con las herramientas de testing de Laravel.
 
 ## Ejecutar todos los tests
-
-Para ejecutar toda la suite de pruebas:
 
 ```bash
 php artisan test
 ```
 
-Este comando ejecuta todos los tests ubicados en:
+La suite actual cubre autenticacion, tickets, comentarios, adjuntos, notificaciones, categorias, dashboard, perfil, usuarios, modulos de workflow, importacion y seguridad basica del login.
+
+Ultima verificacion local:
 
 ```txt
-tests/Feature
-tests/Unit
+145 tests passed
+486 assertions
 ```
 
----
+## Ejecutar tests por modulo
 
-## Ejecutar tests por módulo
-
-También se pueden ejecutar pruebas específicas por archivo.
-
-### Autenticación
+### Autenticacion y seguridad de login
 
 ```bash
 php artisan test tests/Feature/AuthTest.php
 ```
+
+Cubre:
+
+- Login correcto.
+- Credenciales invalidas.
+- Respuesta sin password.
+- Payloads estilo NoSQL rechazados.
+- Intentos tipo SQL injection rechazados.
+- Rate limit por intentos fallidos.
 
 ### Tickets
 
@@ -39,7 +42,7 @@ php artisan test tests/Feature/AuthTest.php
 php artisan test tests/Feature/TicketTest.php
 ```
 
-### Comentarios de tickets
+### Comentarios
 
 ```bash
 php artisan test tests/Feature/TicketCommentTest.php
@@ -63,19 +66,19 @@ php artisan test tests/Feature/TicketAttachmentTest.php
 php artisan test tests/Feature/NotificationTest.php
 ```
 
-### Gestión de usuarios
+### Gestion de usuarios
 
 ```bash
 php artisan test tests/Feature/UserManagementTest.php
 ```
 
-### Perfil del usuario autenticado
+### Perfil
 
 ```bash
 php artisan test tests/Feature/ProfileTest.php
 ```
 
-### Categorías de tickets
+### Categorias
 
 ```bash
 php artisan test tests/Feature/TicketCategoryTest.php
@@ -93,41 +96,43 @@ php artisan test tests/Feature/DashboardTest.php
 php artisan test tests/Feature/SupportAgentTest.php
 ```
 
----
-
-## Ejecutar un test específico
-
-También puedes ejecutar un solo método de prueba usando `--filter`.
-
-Ejemplo:
+### Modulos de workflow
 
 ```bash
-php artisan test --filter=test_authenticated_user_can_create_ticket
+php artisan test tests/Feature/WorkflowModulesTest.php
 ```
 
-Esto es útil cuando se está corrigiendo un error puntual y no se quiere ejecutar toda la suite.
+Cubre categorias por alias `/api/categories`, equipos, tags, SLA, respuestas rapidas, base de conocimiento, satisfaccion y automatizaciones.
 
----
+### Modulos adicionales e importacion
 
-## Preparar base de datos antes de probar
+```bash
+php artisan test tests/Feature/AdditionalModulesTest.php
+```
 
-Si necesitas reiniciar completamente la base de datos local:
+Cubre canales, notas internas, menciones, escalaciones, campos personalizados, webhooks, adjuntos internos, reportes e importacion masiva solo para `admin`.
+
+## Ejecutar un test especifico
+
+```bash
+php artisan test --filter=test_login_rate_limits_repeated_failed_attempts
+```
+
+## Preparar base de datos local
+
+Para reiniciar la base de datos local:
 
 ```bash
 php artisan migrate:fresh --seed
 ```
 
-Luego puedes ejecutar:
+Luego ejecuta:
 
 ```bash
 php artisan test
 ```
 
----
-
-## Formatear código con Laravel Pint
-
-El proyecto usa Laravel Pint para mantener un estilo de código consistente.
+## Formatear codigo con Laravel Pint
 
 En Linux, macOS o Git Bash:
 
@@ -135,75 +140,31 @@ En Linux, macOS o Git Bash:
 ./vendor/bin/pint
 ```
 
-En Windows también puedes usar:
+En Windows:
 
-```bash
+```bat
 vendor\bin\pint
 ```
 
----
-
-## Flujo recomendado antes de hacer commit
-
-Antes de crear un commit, se recomienda ejecutar:
+## Flujo recomendado antes de commit
 
 ```bash
 php artisan test
-./vendor/bin/pint
+vendor/bin/pint
 git status
 ```
 
 En Windows:
 
-```bash
+```bat
 php artisan test
 vendor\bin\pint
 git status
 ```
 
-Si todos los tests pasan y Pint no deja cambios pendientes, el código está listo para commit.
+## Notas
 
----
-
-## Comandos útiles de Git durante testing
-
-Ver archivos modificados:
-
-```bash
-git status
-```
-
-Ver cambios realizados:
-
-```bash
-git diff
-```
-
-Agregar cambios:
-
-```bash
-git add .
-```
-
-Crear commit:
-
-```bash
-git commit -m "Mensaje descriptivo del cambio"
-```
-
-Enviar cambios al repositorio remoto:
-
-```bash
-git push origin main
-```
-
----
-
-## Recomendaciones
-
-* Ejecutar los tests después de crear o modificar un módulo.
-* Ejecutar tests específicos durante el desarrollo.
-* Ejecutar toda la suite antes de cada commit importante.
-* No hacer commit si hay tests fallando.
-* Revisar siempre `git status` antes de confirmar cambios.
-* Usar mensajes de commit claros y descriptivos.
+- Ejecuta tests especificos mientras desarrollas un modulo.
+- Ejecuta toda la suite antes de entregar cambios.
+- No hagas commit si hay tests fallando.
+- Revisa siempre `git status` antes de confirmar cambios.

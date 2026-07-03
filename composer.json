@@ -1,8 +1,8 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "laravel/laravel",
+    "name": "he-code/support-ticket-api",
     "type": "project",
-    "description": "The skeleton application for the Laravel framework.",
+    "description": "REST API para la gestión de tickets de soporte desarrollada con Laravel Sanctum.",
     "keywords": ["laravel", "framework"],
     "license": "MIT",
     "require": {

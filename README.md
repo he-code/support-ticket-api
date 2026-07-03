@@ -1,210 +1,198 @@
 # Support Ticket API
 
-API REST para la gestión de tickets de soporte, desarrollada con Laravel y Laravel Sanctum.
+API REST para gestion de tickets de soporte, construida con Laravel y Laravel Sanctum.
 
-El sistema permite que usuarios creen tickets de soporte, agentes atiendan solicitudes y administradores gestionen usuarios, categorías y el flujo general del sistema.
+El sistema permite que usuarios creen tickets, agentes atiendan solicitudes y administradores gestionen el flujo operativo. Tambien incluye modulos de trabajo para soporte interno, automatizaciones, integraciones, reportes y carga masiva de usuarios.
 
 ## Funcionalidades principales
 
-* Registro e inicio de sesión de usuarios.
-* Autenticación mediante tokens con Laravel Sanctum.
-* Gestión de tickets de soporte.
-* Filtros, búsqueda, ordenamiento y paginación de tickets.
-* Roles de usuario: `user`, `support_agent` y `admin`.
-* Comentarios en tickets.
-* Asignación de tickets a agentes de soporte.
-* Historial de actividad por ticket.
-* Adjuntos en tickets con descarga segura.
-* Notificaciones internas.
-* Dashboard de estadísticas.
-* Gestión de usuarios por administrador.
-* Perfil del usuario autenticado.
-* Categorías de tickets.
+- Registro, login y logout con tokens Sanctum.
+- Login endurecido con validacion estricta, normalizacion de email y limite de intentos.
+- Roles: `user`, `support_agent` y `admin`.
+- Gestion de tickets con categorias, canales, equipos, tags, SLA y campos personalizados.
+- Comentarios, notas internas, menciones y escalaciones.
+- Adjuntos con descarga segura, vista previa y visibilidad interna para staff.
+- Base de conocimiento, respuestas rapidas y encuestas de satisfaccion.
+- Reglas de automatizacion y auditoria de actividad.
+- API keys, webhooks y registro de entregas de integraciones.
+- Exportacion CSV de tickets.
+- Importacion masiva de usuarios por CSV/XLSX, permitida solo para `admin`.
+- Dashboard, notificaciones internas y perfil de usuario.
 
-## Tecnologías utilizadas
+## Tecnologias
 
-* PHP
-* Laravel
-* Laravel Sanctum
-* SQLite / MySQL
-* PHPUnit
-* Laravel Pint
+- PHP 8.3+
+- Laravel
+- Laravel Sanctum
+- SQLite o MySQL
+- PHPUnit
+- Laravel Pint
+- L5 Swagger
 
-## Requisitos
-
-* PHP 8.3 o superior
-* Composer
-* SQLite o MySQL
-* Git
-
-## Instalación
-
-Clonar el repositorio:
+## Instalacion
 
 ```bash
 git clone https://github.com/he-code/support-ticket-api.git
 cd support-ticket-api
-```
-
-Instalar dependencias:
-
-```bash
 composer install
-```
-
-Copiar el archivo de entorno:
-
-```bash
 cp .env.example .env
-```
-
-En Windows también puedes copiarlo manualmente o usar:
-
-```bash
-copy .env.example .env
-```
-
-Generar la clave de la aplicación:
-
-```bash
 php artisan key:generate
-```
-
-Configurar la base de datos en el archivo `.env`.
-
-Para SQLite, se puede usar:
-
-```env
-DB_CONNECTION=sqlite
-```
-
-Y crear el archivo de base de datos:
-
-```bash
-touch database/database.sqlite
-```
-
-En Windows, puedes crear manualmente el archivo:
-
-```txt
-database/database.sqlite
-```
-
-Ejecutar migraciones y seeders:
-
-```bash
 php artisan migrate --seed
-```
-
-Levantar el servidor local:
-
-```bash
 php artisan serve
 ```
 
-La API estará disponible en:
+En Windows puedes copiar `.env.example` manualmente o usar:
+
+```bat
+copy .env.example .env
+```
+
+La API local queda disponible en:
 
 ```txt
 http://localhost:8000/api
 ```
 
-## Autenticación
+## Base de datos
 
-La API utiliza Laravel Sanctum.
+Para SQLite:
 
-Después de iniciar sesión, las rutas protegidas deben recibir el token en el header:
+```env
+DB_CONNECTION=sqlite
+```
+
+Crea el archivo:
+
+```txt
+database/database.sqlite
+```
+
+Para MySQL, configura las variables `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME` y `DB_PASSWORD` en `.env`.
+
+## Autenticacion
+
+La API usa Laravel Sanctum. Despues de iniciar sesion, envia el token en cada ruta protegida:
 
 ```http
 Authorization: Bearer {token}
 ```
 
-## Roles del sistema
+### Seguridad del login
 
-| Rol             | Descripción                                                                     |
-| --------------- | ------------------------------------------------------------------------------- |
-| `user`          | Usuario normal. Puede crear y gestionar sus propios tickets.                    |
-| `support_agent` | Agente de soporte. Puede ver y atender tickets de todos los usuarios.           |
-| `admin`         | Administrador. Puede gestionar usuarios, categorías y recursos administrativos. |
+El endpoint `POST /api/login` aplica:
+
+- `email` y `password` deben ser strings.
+- Se rechazan payloads tipo arreglo u objeto, incluyendo intentos estilo NoSQL como `{"$ne": null}`.
+- El email se normaliza con `trim` y minusculas antes de consultar.
+- La consulta de usuario se hace con Eloquent, usando parametros preparados.
+- Despues de 5 intentos fallidos por email + IP, responde `429` temporalmente.
+- Las respuestas de auth no incluyen el hash de password.
+
+## Roles
+
+| Rol | Descripcion |
+| --- | --- |
+| `user` | Usuario final. Gestiona sus propios tickets y datos de perfil. |
+| `support_agent` | Agente. Atiende tickets, comenta, escala, usa notas internas y ve reportes operativos. |
+| `admin` | Administrador. Gestiona usuarios, modulos administrativos, integraciones e importaciones. |
+
+La importacion masiva de usuarios y el historial de importaciones son exclusivos de `admin`.
 
 ## Endpoints principales
 
 ### Auth
 
-| Método | Endpoint        | Descripción       |
-| ------ | --------------- | ----------------- |
-| POST   | `/api/register` | Registrar usuario |
-| POST   | `/api/login`    | Iniciar sesión    |
-| POST   | `/api/logout`   | Cerrar sesión     |
+| Metodo | Endpoint | Descripcion |
+| --- | --- | --- |
+| POST | `/api/register` | Registrar usuario |
+| POST | `/api/login` | Iniciar sesion |
+| POST | `/api/logout` | Cerrar sesion |
 
-### Profile
+### Usuarios
 
-| Método | Endpoint        | Descripción                 |
-| ------ | --------------- | --------------------------- |
-| GET    | `/api/me`       | Obtener usuario autenticado |
-| PATCH  | `/api/profile`  | Actualizar perfil           |
-| PATCH  | `/api/password` | Cambiar contraseña          |
+| Metodo | Endpoint | Rol | Descripcion |
+| --- | --- | --- | --- |
+| GET | `/api/users` | admin | Listar usuarios |
+| PATCH | `/api/users/{user}/role` | admin | Cambiar rol |
+| GET | `/api/users/imports` | admin | Ver historial de importaciones |
+| POST | `/api/users/import` | admin | Importar usuarios por CSV/XLSX |
+| GET | `/api/support-agents` | autenticado | Listar agentes |
+
+
+## Usuarios demo
+
+Después de ejecutar:
+
+    php artisan migrate:fresh --seed
+
+Se crearán los siguientes usuarios de prueba:
+
+| Rol | Nombre | Email | Contraseña |
+|---|---|---|---|
+| Administrador | Admin User | admin@example.com | password |
+| Agente de soporte | Support Agent | agent@example.com | password |
+| Agente de soporte | Second Support Agent | agent2@example.com | password |
+| Usuario normal | Regular User | user@example.com | password |
+
 
 ### Tickets
 
-| Método | Endpoint                       | Descripción                 |
-| ------ | ------------------------------ | --------------------------- |
-| GET    | `/api/tickets`                 | Listar tickets              |
-| POST   | `/api/tickets`                 | Crear ticket                |
-| GET    | `/api/tickets/{ticket}`        | Ver ticket                  |
-| PATCH  | `/api/tickets/{ticket}`        | Actualizar ticket           |
-| DELETE | `/api/tickets/{ticket}`        | Eliminar ticket             |
-| PATCH  | `/api/tickets/{ticket}/status` | Cambiar estado              |
-| PATCH  | `/api/tickets/{ticket}/assign` | Asignar o desasignar ticket |
+| Metodo | Endpoint | Descripcion |
+| --- | --- | --- |
+| GET | `/api/tickets` | Listar tickets con filtros |
+| POST | `/api/tickets` | Crear ticket |
+| GET | `/api/tickets/{ticket}` | Ver ticket |
+| PATCH | `/api/tickets/{ticket}` | Actualizar ticket |
+| DELETE | `/api/tickets/{ticket}` | Eliminar ticket |
+| PATCH | `/api/tickets/{ticket}/status` | Cambiar estado |
+| PATCH | `/api/tickets/{ticket}/assign` | Asignar o desasignar ticket |
 
-### Comentarios
+### Modulos de ticket
 
-| Método | Endpoint                                   | Descripción         |
-| ------ | ------------------------------------------ | ------------------- |
-| GET    | `/api/tickets/{ticket}/comments`           | Listar comentarios  |
-| POST   | `/api/tickets/{ticket}/comments`           | Crear comentario    |
-| DELETE | `/api/tickets/{ticket}/comments/{comment}` | Eliminar comentario |
+| Metodo | Endpoint | Descripcion |
+| --- | --- | --- |
+| GET/POST | `/api/tickets/{ticket}/comments` | Comentarios |
+| GET/POST | `/api/tickets/{ticket}/attachments` | Adjuntos |
+| GET | `/api/tickets/{ticket}/attachments/{attachment}/download` | Descargar adjunto |
+| GET | `/api/tickets/{ticket}/attachments/{attachment}/preview` | Vista previa |
+| GET | `/api/tickets/{ticket}/activities` | Actividad |
+| GET/POST | `/api/tickets/{ticket}/internal-notes` | Notas internas |
+| GET | `/api/tickets/{ticket}/mentions` | Menciones |
+| GET/POST | `/api/tickets/{ticket}/escalations` | Escalaciones |
+| PATCH | `/api/tickets/{ticket}/escalations/{escalation}/resolve` | Resolver escalacion |
+| GET/POST | `/api/tickets/{ticket}/knowledge-base-articles` | Articulos vinculados |
+| GET/POST | `/api/tickets/{ticket}/satisfaction` | Encuesta de satisfaccion |
 
-### Adjuntos
+### Catalogos y flujo
 
-| Método | Endpoint                                                  | Descripción       |
-| ------ | --------------------------------------------------------- | ----------------- |
-| GET    | `/api/tickets/{ticket}/attachments`                       | Listar adjuntos   |
-| POST   | `/api/tickets/{ticket}/attachments`                       | Subir adjunto     |
-| GET    | `/api/tickets/{ticket}/attachments/{attachment}/download` | Descargar adjunto |
-| DELETE | `/api/tickets/{ticket}/attachments/{attachment}`          | Eliminar adjunto  |
+| Metodo | Endpoint | Descripcion |
+| --- | --- | --- |
+| apiResource | `/api/ticket-categories` | Categorias |
+| apiResource | `/api/categories` | Alias compatible para categorias |
+| apiResource | `/api/ticket-channels` | Canales de entrada |
+| apiResource | `/api/support-teams` | Equipos |
+| apiResource | `/api/ticket-tags` | Tags |
+| apiResource | `/api/quick-replies` | Respuestas rapidas |
+| apiResource | `/api/knowledge-base-articles` | Base de conocimiento |
+| apiResource | `/api/automation-rules` | Automatizaciones |
+| apiResource | `/api/custom-fields` | Campos personalizados |
 
-### Categorías
+### Horarios, integraciones y reportes
 
-| Método | Endpoint                                  | Descripción          |
-| ------ | ----------------------------------------- | -------------------- |
-| GET    | `/api/ticket-categories`                  | Listar categorías    |
-| POST   | `/api/ticket-categories`                  | Crear categoría      |
-| GET    | `/api/ticket-categories/{ticketCategory}` | Ver categoría        |
-| PATCH  | `/api/ticket-categories/{ticketCategory}` | Actualizar categoría |
-| DELETE | `/api/ticket-categories/{ticketCategory}` | Eliminar categoría   |
-
-### Notificaciones
-
-| Método | Endpoint                                 | Descripción                    |
-| ------ | ---------------------------------------- | ------------------------------ |
-| GET    | `/api/notifications`                     | Listar notificaciones          |
-| PATCH  | `/api/notifications/{notification}/read` | Marcar notificación como leída |
-| PATCH  | `/api/notifications/read-all`            | Marcar todas como leídas       |
-
-### Administración
-
-| Método | Endpoint                 | Descripción                  |
-| ------ | ------------------------ | ---------------------------- |
-| GET    | `/api/users`             | Listar usuarios              |
-| PATCH  | `/api/users/{user}/role` | Cambiar rol de usuario       |
-| GET    | `/api/support-agents`    | Listar agentes de soporte    |
-| GET    | `/api/dashboard/stats`   | Ver estadísticas del sistema |
+| Metodo | Endpoint | Descripcion |
+| --- | --- | --- |
+| GET/POST/DELETE | `/api/business-hours` | Horarios laborales |
+| GET/POST/DELETE | `/api/business-holidays` | Feriados |
+| GET/POST/DELETE | `/api/integrations/api-keys` | API keys |
+| apiResource | `/api/integrations/webhooks` | Webhooks |
+| GET | `/api/integrations/webhooks/{webhook}/deliveries` | Entregas del webhook |
+| GET | `/api/audit-logs` | Auditoria |
+| GET | `/api/reports/tickets/export` | Exportar tickets CSV |
+| GET | `/api/dashboard/stats` | Estadisticas |
 
 ## Filtros de tickets
 
-El endpoint `GET /api/tickets` permite usar filtros por query string.
-
-Ejemplos:
+`GET /api/tickets` acepta:
 
 ```http
 GET /api/tickets?status=open
@@ -214,82 +202,86 @@ GET /api/tickets?assigned=me
 GET /api/tickets?assigned=unassigned
 GET /api/tickets?assigned_to_id=3
 GET /api/tickets?category_id=1
+GET /api/tickets?channel_id=1
+GET /api/tickets?team_id=1
+GET /api/tickets?tag_id=1
+GET /api/tickets?sla=overdue
+GET /api/tickets?created_from=2026-06-01&created_to=2026-06-30
 GET /api/tickets?sort_by=created_at&sort_direction=desc
 ```
 
-## Estados de ticket
+## Estados y prioridades
+
+Estados:
 
 ```txt
 open
 in_progress
+waiting_customer
+waiting_internal
 resolved
 closed
+reopened
 ```
 
-## Prioridades de ticket
+Prioridades:
 
 ```txt
 low
 medium
 high
+urgent
 ```
 
-## Ejecutar tests
+## Importacion masiva de usuarios
 
-Ejecutar todos los tests:
+Ruta:
+
+```http
+POST /api/users/import
+```
+
+Requiere token de un usuario `admin`.
+
+Campos multipart:
+
+| Campo | Tipo | Requerido | Descripcion |
+| --- | --- | --- | --- |
+| `file` | archivo CSV/TXT/XLSX | si | Archivo con usuarios |
+| `update_existing` | boolean | no | Actualiza usuarios existentes por email |
+| `default_password` | string | no | Password por defecto si el archivo no trae password |
+
+Columnas aceptadas:
+
+```txt
+name,email,role,password
+```
+
+Tambien se aceptan alias en espanol como `nombre`, `correo`, `rol` y `contrasena`.
+
+Para XLSX, el PHP del servidor debe tener habilitada la extension `zip` (`ZipArchive`). Si no esta disponible, la API responde `422` con un mensaje claro.
+
+## Documentacion adicional
+
+- [Referencia de API](docs/api-reference.md)
+- [Seguridad](docs/security.md)
+- [Roles y permisos](docs/roles-and-permissions.md)
+- [Testing](docs/testing.md)
+
+## Tests y formato
 
 ```bash
 php artisan test
-```
-
-Ejecutar tests por módulo:
-
-```bash
-php artisan test tests/Feature/TicketTest.php
-php artisan test tests/Feature/TicketCommentTest.php
-php artisan test tests/Feature/TicketAttachmentTest.php
-php artisan test tests/Feature/NotificationTest.php
-php artisan test tests/Feature/TicketCategoryTest.php
-```
-## Usuarios demo
-
-Después de ejecutar:
-
-```bash
-php artisan migrate:fresh --seed
-```
-
-## Formatear código
-
-```bash
-./vendor/bin/pint
+vendor/bin/pint
 ```
 
 En Windows:
 
-```bash
+```bat
+php artisan test
 vendor\bin\pint
 ```
 
-## Documentación adicional
-
-* [Documentación de API](API_DOCUMENTATION.md)
-* [Roles y permisos](docs/roles-and-permissions.md)
-* [Testing](docs/testing.md)
-
 ## Estado del proyecto
 
-Backend en desarrollo activo.
-
-Módulos implementados:
-
-* Autenticación
-* Tickets
-* Comentarios
-* Adjuntos
-* Actividades
-* Notificaciones
-* Categorías
-* Perfil
-* Gestión de usuarios
-* Dashboard
+Backend en desarrollo activo con suite automatizada para autenticacion, tickets, modulos de workflow, importacion y seguridad basica del login.
