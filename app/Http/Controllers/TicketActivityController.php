@@ -19,7 +19,7 @@ class TicketActivityController extends Controller
 
         // Timeline ordenado desde la actividad más reciente
         $activities = $ticket->activities()
-            ->with('user')
+            ->with(['ticket', 'user'])
             ->latest()
             ->paginate(10);
 

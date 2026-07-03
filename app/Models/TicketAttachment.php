@@ -16,7 +16,24 @@ class TicketAttachment extends Model
         'file_path',
         'mime_type',
         'size',
+        'is_internal',
+        'preview_path',
+        'metadata',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'is_internal' => 'boolean',
+            'metadata' => 'array',
+        ];
+    }
+
+    public function isPreviewable(): bool
+    {
+        return str_starts_with((string) $this->mime_type, 'image/')
+            || in_array($this->mime_type, ['application/pdf', 'text/plain'], true);
+    }
 
     public function ticket()
     {

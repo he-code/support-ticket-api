@@ -22,6 +22,11 @@ class AssignTicketRequest extends FormRequest
                     $query->where('role', 'support_agent');
                 }),
             ],
+            'team_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('support_teams', 'id')->where('is_active', true),
+            ],
         ];
     }
 }

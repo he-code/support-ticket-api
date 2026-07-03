@@ -24,6 +24,7 @@ class TicketAttachmentController extends Controller
         // Listamos los adjuntos del ticket con el usuario que los subió
         $attachments = $ticket->attachments()
             ->with('user')
+            ->when(! $request->user()->isStaff(), fn ($query) => $query->where('is_internal', false))
             ->latest()
             ->paginate(10);
 
@@ -50,6 +51,12 @@ class TicketAttachmentController extends Controller
             ], 403);
         }
 
+        if ($request->boolean('is_internal') && ! $request->user()->isStaff()) {
+            return response()->json([
+                'message' => 'Only staff can upload internal attachments',
+            ], 403);
+        }
+
         // Obtenemos el archivo enviado en el campo "file"
         $file = $request->file('file');
 
@@ -63,6 +70,13 @@ class TicketAttachmentController extends Controller
             'file_path' => $path,
             'mime_type' => $file->getMimeType(),
             'size' => $file->getSize(),
+            'is_internal' => $request->boolean('is_internal'),
+            'preview_path' => $path,
+            'metadata' => [
+                'extension' => $file->getClientOriginalExtension(),
+                'previewable' => str_starts_with((string) $file->getMimeType(), 'image/')
+                    || in_array($file->getMimeType(), ['application/pdf', 'text/plain'], true),
+            ],
         ]);
 
         // Registramos actividad en el historial del ticket
@@ -155,10 +169,57 @@ class TicketAttachmentController extends Controller
             ], 404);
         }
 
+        if ($attachment->is_internal && ! $request->user()->isStaff()) {
+            return response()->json([
+                'message' => 'Unauthorized',
+            ], 403);
+        }
+
         // Descargamos el archivo usando su nombre original
         return Storage::download(
             $attachment->file_path,
             $attachment->original_name
+        );
+    }
+
+    public function preview(Request $request, Ticket $ticket, TicketAttachment $attachment)
+    {
+        if ($request->user()->cannot('view', $ticket)) {
+            return response()->json([
+                'message' => 'Unauthorized',
+            ], 403);
+        }
+
+        if ($attachment->ticket_id !== $ticket->id) {
+            return response()->json([
+                'message' => 'Attachment not found for this ticket',
+            ], 404);
+        }
+
+        if ($attachment->is_internal && ! $request->user()->isStaff()) {
+            return response()->json([
+                'message' => 'Unauthorized',
+            ], 403);
+        }
+
+        if (! $attachment->isPreviewable()) {
+            return response()->json([
+                'message' => 'Attachment is not previewable',
+            ], 422);
+        }
+
+        $path = $attachment->preview_path ?: $attachment->file_path;
+
+        if (! Storage::exists($path)) {
+            return response()->json([
+                'message' => 'Attachment preview not found',
+            ], 404);
+        }
+
+        return Storage::response(
+            $path,
+            $attachment->original_name,
+            ['Content-Type' => $attachment->mime_type ?: 'application/octet-stream']
         );
     }
 }

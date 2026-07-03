@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Ticket;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -26,14 +27,34 @@ class UpdateTicketRequest extends FormRequest
         return [
             'title' => 'sometimes|string|max:255',
             'description' => 'sometimes|string',
-            'status' => 'sometimes|in:open,in_progress,resolved,closed',
-            'priority' => 'sometimes|in:low,medium,high',
+            'status' => ['sometimes', Rule::in(Ticket::STATUSES)],
+            'priority' => ['sometimes', Rule::in(Ticket::PRIORITIES)],
             'category_id' => [
                 'sometimes',
                 'nullable',
                 'integer',
                 Rule::exists('ticket_categories', 'id')->where('is_active', true),
             ],
+            'channel_id' => [
+                'sometimes',
+                'nullable',
+                'integer',
+                Rule::exists('ticket_channels', 'id')->where('is_active', true),
+            ],
+            'team_id' => [
+                'sometimes',
+                'nullable',
+                'integer',
+                Rule::exists('support_teams', 'id')->where('is_active', true),
+            ],
+            'tag_ids' => 'sometimes|array',
+            'tag_ids.*' => [
+                'integer',
+                Rule::exists('ticket_tags', 'id')->where('is_active', true),
+            ],
+            'first_response_due_at' => 'sometimes|nullable|date',
+            'resolution_due_at' => 'sometimes|nullable|date',
+            'custom_fields' => 'sometimes|array',
         ];
     }
 }

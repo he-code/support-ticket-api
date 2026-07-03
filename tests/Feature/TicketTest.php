@@ -487,7 +487,7 @@ class TicketTest extends TestCase
 
         Sanctum::actingAs($user);
 
-        $response = $this->getJson('/api/tickets?priority=urgent');
+        $response = $this->getJson('/api/tickets?priority=critical');
 
         $response->assertStatus(422);
 

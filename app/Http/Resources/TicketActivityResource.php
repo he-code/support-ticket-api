@@ -17,6 +17,13 @@ class TicketActivityResource extends JsonResource
             'new_value' => $this->new_value,
             'metadata' => $this->metadata,
 
+            'ticket' => $this->ticket ? [
+                'id' => $this->ticket->id,
+                'title' => $this->ticket->title,
+                'status' => $this->ticket->status,
+                'priority' => $this->ticket->priority,
+            ] : null,
+
             'performed_by' => $this->user ? [
                 'id' => $this->user->id,
                 'name' => $this->user->name,

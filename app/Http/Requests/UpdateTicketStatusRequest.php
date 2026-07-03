@@ -2,8 +2,10 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Ticket;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class UpdateTicketStatusRequest extends FormRequest
 {
@@ -23,7 +25,7 @@ class UpdateTicketStatusRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'status' => 'required|in:open,in_progress,resolved,closed',
+            'status' => ['required', Rule::in(Ticket::STATUSES)],
         ];
     }
 }

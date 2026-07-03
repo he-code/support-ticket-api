@@ -7,6 +7,8 @@ use App\Http\Resources\TicketCommentResource;
 use App\Models\Ticket;
 use App\Models\TicketComment;
 use App\Notifications\TicketCommentCreatedNotification;
+use App\Services\IntegrationEventService;
+use App\Services\MentionService;
 use Illuminate\Http\Request;
 
 class TicketCommentController extends Controller
@@ -37,17 +39,23 @@ class TicketCommentController extends Controller
         ]);
     }
 
-    public function store(StoreTicketCommentRequest $request, Ticket $ticket)
-    {
+    public function store(
+        StoreTicketCommentRequest $request,
+        Ticket $ticket,
+        MentionService $mentionService,
+        IntegrationEventService $integrationEventService
+    ) {
         if (! $request->user()->isStaff() && $ticket->user_id !== $request->user()->id) {
             return response()->json([
                 'message' => 'Unauthorized',
             ], 403);
         }
 
+        $validated = $request->validated();
+
         $comment = $ticket->comments()->create([
             'user_id' => $request->user()->id,
-            'body' => $request->validated()['body'],
+            'body' => $validated['body'],
         ]);
 
         $ticket->recordActivity(
@@ -58,6 +66,27 @@ class TicketCommentController extends Controller
                 'comment_id' => $comment->id,
             ]
         );
+
+        if ($request->user()->isStaff() && ! $ticket->first_responded_at) {
+            $ticket->forceFill([
+                'first_responded_at' => now(),
+            ])->save();
+
+            $ticket->recordActivity(
+                type: 'first_response_recorded',
+                user: $request->user(),
+                description: 'First support response recorded'
+            );
+        }
+
+        $mentionService->createMentions(
+            $ticket,
+            $validated['mention_user_ids'] ?? [],
+            $request->user(),
+            TicketComment::class,
+            $comment->id
+        );
+
         // Si comenta un agente o admin, notificamos al dueño del ticket.
         // Si comenta el dueño del ticket, notificamos al agente asignado.
         // Nunca notificamos al mismo usuario que creó el comentario.
@@ -73,6 +102,12 @@ class TicketCommentController extends Controller
         }
 
         $comment->load('user');
+
+        $integrationEventService->dispatch('ticket.comment_created', [
+            'ticket_id' => $ticket->id,
+            'comment_id' => $comment->id,
+            'user_id' => $request->user()->id,
+        ]);
 
         return response()->json([
             'message' => 'Comment created successfully',

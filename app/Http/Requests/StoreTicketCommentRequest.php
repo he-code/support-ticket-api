@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreTicketCommentRequest extends FormRequest
 {
@@ -24,6 +25,13 @@ class StoreTicketCommentRequest extends FormRequest
     {
         return [
             'body' => 'required|string|min:2|max:5000',
+            'mention_user_ids' => 'nullable|array',
+            'mention_user_ids.*' => [
+                'integer',
+                Rule::exists('users', 'id')->where(function ($query) {
+                    $query->whereIn('role', ['support_agent', 'admin']);
+                }),
+            ],
         ];
     }
 }

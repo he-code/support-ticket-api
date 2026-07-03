@@ -20,6 +20,7 @@ class StoreTicketAttachmentRequest extends FormRequest
                 'max:5120',
                 'mimes:jpg,jpeg,png,pdf,txt,doc,docx',
             ],
+            'is_internal' => 'nullable|boolean',
         ];
     }
 }

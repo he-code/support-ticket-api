@@ -27,6 +27,41 @@ class User extends Authenticatable
         return $this->hasMany(Ticket::class, 'assigned_to_id');
     }
 
+    public function supportTeams()
+    {
+        return $this->belongsToMany(SupportTeam::class, 'support_team_user')->withTimestamps();
+    }
+
+    public function quickReplies()
+    {
+        return $this->hasMany(QuickReply::class, 'created_by_id');
+    }
+
+    public function knowledgeBaseArticles()
+    {
+        return $this->hasMany(KnowledgeBaseArticle::class, 'created_by_id');
+    }
+
+    public function satisfactionSurveys()
+    {
+        return $this->hasMany(TicketSatisfactionSurvey::class);
+    }
+
+    public function internalNotes()
+    {
+        return $this->hasMany(TicketInternalNote::class);
+    }
+
+    public function mentions()
+    {
+        return $this->hasMany(TicketMention::class, 'mentioned_user_id');
+    }
+
+    public function escalations()
+    {
+        return $this->hasMany(TicketEscalation::class, 'escalated_by_id');
+    }
+
     public function isSupportAgent(): bool
     {
         return $this->role === 'support_agent';

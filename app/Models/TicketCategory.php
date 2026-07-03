@@ -27,4 +27,9 @@ class TicketCategory extends Model
     {
         return $this->hasMany(Ticket::class, 'category_id');
     }
+
+    public function knowledgeBaseArticles()
+    {
+        return $this->hasMany(KnowledgeBaseArticle::class, 'category_id');
+    }
 }
