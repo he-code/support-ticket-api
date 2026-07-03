@@ -3,7 +3,16 @@
     "name": "he-code/support-ticket-api",
     "type": "project",
     "description": "REST API para la gestión de tickets de soporte desarrollada con Laravel Sanctum.",
-    "keywords": ["laravel", "framework"],
+    "keywords": [
+    "laravel",
+    "php",
+    "api",
+    "rest-api",
+    "sanctum",
+    "support-ticket",
+    "backend",
+    "phpunit"
+    ],
     "license": "MIT",
     "require": {
         "php": "^8.3",
